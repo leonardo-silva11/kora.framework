@@ -14,7 +14,7 @@
     },
     "autoload": {
         "psr-4": {
-            "SeuNamespace\\": "src/"
+            "kora\\": "src/"
         }
     },
     "config": {
@@ -23,4 +23,3 @@
     "minimum-stability": "stable",
     "prefer-stable": true
 }
-
