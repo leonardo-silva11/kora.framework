@@ -1,0 +1,14 @@
+<?php
+namespace app\{{__namespace}};
+
+use kora\bin\AppKora;
+
+class App{{__name}} extends AppKora
+{   
+   public function __construct()
+   {
+       parent::__construct($this);   
+   }
+
+   public function config(){}
+}
