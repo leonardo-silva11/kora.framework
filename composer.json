@@ -1,18 +1,21 @@
 {
-    "name": "dev-leonardo-s-s/kora.framework",
-    "description": "Um framework mágico para PHP",
+    "name": "dev-leonardo-s-s/kora.app",
+    "description": "The magic framework php",
     "type": "framework",
     "license": "MIT",
     "authors": [
         {
-            "name": "Seu Nome",
-            "email": "seu-email@example.com"
+            "name": "leonardo Souza da Silva",
+            "email": "dev.leonardo.s.s@gmail.com"
         }
-    ],
-    "require": {},
+    ], 
+    "require": {
+        "symfony/console": "^6.3"
+    },
     "autoload": {
         "psr-4": {
             "SeuNamespace\\": "src/"
         }
     }
 }
+
