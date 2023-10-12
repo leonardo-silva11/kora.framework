@@ -1,34 +1,28 @@
+#!/usr/bin/env php
 <?php
 namespace kora\cli\cmd;
 
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Output\ConsoleOutput;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputArgument;
 
-class MakeAppCommand extends Command
+class MakeAppCommand
 {
-    protected static $defaultName = 'make:app';
-
-    protected function configure()
+    public function __construct()
     {
-        $this
-            ->setDescription('Cria um novo app com arquivos de view')
-            ->setHelp('Este comando cria um novo app web com estrutura de view.')
-            ->addArgument('appName', InputArgument::REQUIRED, 'Nome do aplicativo (obrigatório)');
-    }
+        $app = new Application();
 
-    protected function execute(InputInterface $input, OutputInterface $output)
-    {
-      
-
-        $appName = $input->getArgument('appName');
-
-        var_dump($appName);exit;
-          // Implemente a lógica para criar a estrutura do aplicativo aqui
-        // Por exemplo, criar controladores e arquivos necessários
-        $output->writeln('Criando um novo aplicativo...');
-        exit;
-        return Command::SUCCESS;
+        $app->register('make:app')
+            ->addArgument('name', InputArgument::REQUIRED)
+            ->setCode(function ($input, $output) 
+            {
+                $name = $input->getArgument('name');
+                $output->writeln("Criando um novo aplicativo {$name}...");
+                
+                
+            });
+            $app->run();
     }
 }
