@@ -1,9 +1,9 @@
 <?php
 namespace app\{{__namespace}};
 
-use kora\bin\AppKora;
+use kora\bin\AppKora as {{__alias}};
 
-class App{{__name}} extends AppKora
+class {{__name}} extends {{__alias}}
 {   
    public function __construct()
    {

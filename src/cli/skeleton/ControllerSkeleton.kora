@@ -1,0 +1,22 @@
+<?php
+namespace app\{{appName}}\controllers;
+
+use Harp\bin\HarpResponse;
+use Harp\bin\HarpController;
+use App\{{appName}}\modules\{{moduleName}}\model\{{nameController}}Model;
+{{namespace_view}}
+
+
+class {{nameController}}Controller extends HarpController
+{
+    private ${{nameController}}Model;
+
+    public function __construct({{attributesConstruct}})
+    {
+        parent::__construct();
+
+        $this->{{nameController}}Model = new {{nameController}}Model();
+    }
+    
+    {{defaultMethod}}
+}
