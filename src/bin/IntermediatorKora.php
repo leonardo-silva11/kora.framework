@@ -1,7 +1,7 @@
 <?php
 namespace kora\bin;
 
-abstract class CoordinatorViewKora
+abstract class IntermediatorViewKora
 {    
     protected function __construct()
     {
