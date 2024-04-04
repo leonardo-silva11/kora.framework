@@ -4,6 +4,8 @@ namespace kora\bin;
 abstract class ControllerKora
 {
     protected static AppKora $app;
+
+    protected function __construct(){}
     
     protected function clearBuffer()
     {
@@ -26,8 +28,13 @@ abstract class ControllerKora
         $this->whenToRedirect();
         exit(header('location:'.$url));
     }
+
+    protected function getParamConfig($key)
+    {
+        return self::$app->getParamConfig($key,'public');
+    }
     
-    private static function inject(AppKora $app)
+    private static function start(AppKora $app)
     {
         ControllerKora::$app = $app;
     }    
