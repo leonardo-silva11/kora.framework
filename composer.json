@@ -15,6 +15,7 @@
         "illuminate/database": "^10.48.4",
         "illuminate/filesystem": "^10.48.4",
         "mtdowling/jmespath.php": "^2.7",
+        "respect/validation": "^2.3",
         "symfony/console": "^6.3",
         "symfony/filesystem": "^6.3",
         "symfony/http-foundation": "^6.3"
