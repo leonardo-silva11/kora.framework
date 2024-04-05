@@ -101,26 +101,29 @@ class DependencyManagerKora
     private function resolveCretedInstances(Array &$resolved, string $nameMethod) : void
     {
         $objects = $this->extract($this->services[$nameMethod],'object');
-
+   
         $injectables = $this->app->injectables();
 
         for($i = 0; $i < count($objects); ++$i)
         {
             $key = mb_substr(strrchr($objects[$i], '\\'),1);
 
-            $resolved[$objects[$i]] = null;
-      
+           // $resolved[$objects[$i]] = null;
+           // $resolved[$key] = null;
+            //dd('entrei',$objects,$objects[$i],$injectables);
             if(array_key_exists($objects[$i],$injectables))
-            {
+            {   
                 $resolved[$key] = $injectables[$objects[$i]];
+                //$resolved[$objects[$i]] = $injectables[$objects[$i]];
             }
         }
     }
 
-    private function resolvedNullInstances(Array &$resolved) : void
+    private function resolvedNullInstances(Array &$resolved,$tp = null) : void
     {
+
         foreach($resolved as $type => $instance)
-        {
+        {     
             if($instance == null)
             {
                 $key = mb_substr(strrchr($type, '\\'),1);
@@ -160,7 +163,9 @@ class DependencyManagerKora
         if(array_key_exists('constructor',$this->services))
         {
             $this->resolveCretedInstances($resolved,'constructor');
-            $this->resolvedNullInstances($resolved);
+   
+            $this->resolvedNullInstances($resolved,'constructor');
+
             $this->resolveParameters($resolved,'constructor');
         }
 

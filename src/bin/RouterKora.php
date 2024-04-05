@@ -216,7 +216,7 @@ class RouterKora
         
         $controller = new $ctrNameClass(...$constructorDependencies);
 
-        $filters = $this->app->getParamConfig('config.http.filters','public');
+       // $filters = $this->app->getParamConfig('config.http.filters','public');
 
         $httpParameters = $this->app->getParamConfig('config.http.parameters','public');
         $parameters = array_merge($httpParameters,$routeDependencies);

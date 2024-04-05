@@ -137,11 +137,11 @@ class ORM
         use Illuminate\Database\Eloquent\Model;
         class {$entityName} extends Model
         {
-
+            public \$table = '{$this->cmdArgs[0]}';
         }
         EOD;
 
-        file_put_contents("{$this->paths['entity']}{$this->directorySeparator}{$this->cmdArgs[0]}.php",$entity);
+        file_put_contents("{$this->paths['entity']}{$this->directorySeparator}{$entityName}.php",$entity);
 
         if(!empty($m))
         {
