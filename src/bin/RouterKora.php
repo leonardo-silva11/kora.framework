@@ -25,14 +25,14 @@ class RouterKora
     private FilterKora $FilterKora;
 
 
-    private function __construct()
+    private function __construct(string $pathSettings)
     {
         RouterKora::$request = Request::createFromGlobals();
 
         $this->projectPath = dirname(__DIR__,5);
         $this->appPath = "$this->projectPath/app";
 
-        $appSettings = $this->getAppSettings();
+        $appSettings = $this->getAppSettings($pathSettings);
         $this->config($appSettings);
      
     }
@@ -209,14 +209,14 @@ class RouterKora
         $this->app->extraConfig();
         $serviceContainer  = new DependencyManagerKora($this->app);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
-      
+ 
         $routeDependencies = $serviceContainer->resolveRouteDependencies();
         $ctrNameClass = $this->app->getParamConfig('config.http.request.namespace','public');
         $ctrNameAction = $this->app->getParamConfig('config.http.request.aUrl','public');
         
         $controller = new $ctrNameClass(...$constructorDependencies);
 
-       // $filters = $this->app->getParamConfig('config.http.filters','public');
+        //$filters = $this->app->getParamConfig('config.http.filters','public');
 
         $httpParameters = $this->app->getParamConfig('config.http.parameters','public');
         $parameters = array_merge($httpParameters,$routeDependencies);
@@ -227,16 +227,16 @@ class RouterKora
         $refMethod->setAccessible(true); // Permitir acesso ao método privado
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
-        
+     
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
         $filterResponseBefore = $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
         $m1->setAccessible(false);
-
+      
         $keyBeforeFilter = "{$filterResponseBefore->__getShortName()}Before";
         $parameters[$keyBeforeFilter] = $filterResponseBefore;
-       
+
         $responseController = $controller->$ctrNameAction(...$parameters);
 
         if($responseController instanceof Response)
@@ -245,9 +245,9 @@ class RouterKora
         }
     }
 
-    private function getAppSettings()
+    private function getAppSettings(string $pathSettings)
     {
-        $str = file_get_contents("$this->projectPath/appsettings.json");
+        $str = file_get_contents($pathSettings);
         
         $settings = @json_decode($str,true);
 
@@ -261,11 +261,11 @@ class RouterKora
         return $settings;
     }
 
-    public static function start()
+    public static function start($pathSettings)
     {
         if(empty(RouterKora::$instance))
         {
-            RouterKora::$instance = new RouterKora();
+            RouterKora::$instance = new RouterKora($pathSettings);
         }
     }
 }

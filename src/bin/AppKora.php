@@ -1,12 +1,9 @@
 <?php 
 namespace kora\bin;
 
-use JmesPath\Env;
 use kora\lib\collections\Collections;
 use kora\lib\exceptions\DefaultException;
 use Symfony\Component\HttpFoundation\Request;
-
-use function JmesPath\search;
 
 abstract class AppKora
 {
@@ -82,10 +79,6 @@ abstract class AppKora
 
     public function parseRouteConfig(array $matchRoute)
     {
-
-       // dd($this->app['protected']['routes'],$matchRoute);
-
-
         $routeCtr = Collections::getElementArrayKeyInsensitive($matchRoute['current']['cUrl'],$this->app['protected']['routes']);
 
         if(empty($routeCtr['element']['actions']))
@@ -107,9 +100,6 @@ abstract class AppKora
         ** Caso contrário dispara um DefaultException com código http 404
         */
         $this->app['protected']['route'] = $routeAction['element'];
-            /*isset($this->app['protected']['routes'][$cUrl]['actions'][$aUrl]) ? 
-            $this->app['protected']['routes'][$cUrl]['actions'][$aUrl] : 
-            throw new DefaultException("Route: {$cUrl}/{$aUrl} not found!",404);*/
 
         if(empty($this->app['protected']['route']['path']))
         {

@@ -48,7 +48,17 @@ class DependencyManagerKora
         ) 
         {
 
-            $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() : (array_key_exists($parameterType->getName(),$this->defaultValues) ? $this->defaultValues[$parameterType->getName()] : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));        
+            $injectables = $this->app->injectables();
+
+            if(array_key_exists($parameter->getName(),$injectables))
+            {
+                $dependencies[] = $injectables[$parameter->getName()];
+            }
+            else
+            {
+                $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() 
+                : (array_key_exists($parameterType->getName(),$this->defaultValues) ? $this->defaultValues[$parameterType->getName()] : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));    
+            }    
         }
     }
 
@@ -66,6 +76,7 @@ class DependencyManagerKora
             return new $namespaceClass();
         }
 
+     
         $parameters = $constructor->getParameters();
         $dependencies = [];
 
@@ -84,9 +95,9 @@ class DependencyManagerKora
             }
             else if($parameterType instanceof ReflectionNamedType)
             {
+                $injectables = $this->app->injectables();
                 $dependencyClassName = $parameterType->getName();
-
-                $dependencies[] = $this->resolve($dependencyClassName);
+                $dependencies[] = array_key_exists($dependencyClassName,$injectables) ? $injectables[$dependencyClassName] : $this->resolve($dependencyClassName);
             }
             else 
             {
@@ -101,37 +112,37 @@ class DependencyManagerKora
     private function resolveCretedInstances(Array &$resolved, string $nameMethod) : void
     {
         $objects = $this->extract($this->services[$nameMethod],'object');
-   
+ 
         $injectables = $this->app->injectables();
 
         for($i = 0; $i < count($objects); ++$i)
         {
-            $key = mb_substr(strrchr($objects[$i], '\\'),1);
+            $resolved[$objects[$i]] = null;
 
-           // $resolved[$objects[$i]] = null;
-           // $resolved[$key] = null;
-            //dd('entrei',$objects,$objects[$i],$injectables);
             if(array_key_exists($objects[$i],$injectables))
             {   
-                $resolved[$key] = $injectables[$objects[$i]];
-                //$resolved[$objects[$i]] = $injectables[$objects[$i]];
+                $resolved[$objects[$i]] = $injectables[$objects[$i]];
             }
         }
     }
 
-    private function resolvedNullInstances(Array &$resolved,$tp = null) : void
+    private function resolvedNullInstances(Array &$resolved) : void
     {
 
         foreach($resolved as $type => $instance)
         {     
             if($instance == null)
             {
-                $key = mb_substr(strrchr($type, '\\'),1);
-
-                $resolved[$key] = $this->resolve($type);
-                unset($resolved[$type]);
+                //$key = mb_substr(strrchr($type, '\\'),1);
+                $resolved[$type] = $this->resolve($type);
+               // unset($resolved[$type]);
+                //dd($resolved);
             }
+
+       
         }
+
+       
     }
 
     private function resolveParameters(Array &$resolved,string $nameMethod)
@@ -156,6 +167,20 @@ class DependencyManagerKora
         }
     }
 
+    private function prepareDependencies($resolvedDependencies)
+    {
+        $dependencies = [];
+
+        foreach($resolvedDependencies as $k => $dependency)
+        {
+            $key = mb_substr(strrchr($k, '\\'),1);
+
+            $dependencies[$key] = $dependency;
+        }
+
+        return $dependencies;
+    }
+
     public function resolveConstructorDependencies() : array
     {
         $resolved = [];
@@ -163,13 +188,11 @@ class DependencyManagerKora
         if(array_key_exists('constructor',$this->services))
         {
             $this->resolveCretedInstances($resolved,'constructor');
-   
             $this->resolvedNullInstances($resolved,'constructor');
-
             $this->resolveParameters($resolved,'constructor');
         }
-
-        return $resolved;
+     
+        return $this->prepareDependencies($resolved);
     }
 
     public function resolveRouteDependencies() : array
@@ -185,7 +208,7 @@ class DependencyManagerKora
             $this->resolveParameters($resolved, $aUrl);
         }
 
-        return $resolved;
+        return $this->prepareDependencies($resolved);
     }
 
     public function resolveFiltersDependencies($type) : array
@@ -214,11 +237,11 @@ class DependencyManagerKora
                     $this->resolveCretedInstances($resolved[$type][$aUrl], $aUrl);
                     $this->resolvedNullInstances($resolved[$type][$aUrl]);
                     $this->resolveParameters($resolved[$type][$aUrl], $aUrl);
+                    $resolved[$type][$aUrl] = $this->prepareDependencies($resolved[$type][$aUrl]);
                 }
             }
         }
-
-
+        
         return $resolved;
     }
 }

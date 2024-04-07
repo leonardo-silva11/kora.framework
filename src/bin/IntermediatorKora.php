@@ -69,6 +69,7 @@ abstract class IntermediatorKora
             ControllerKora $controller
         ) : FilterResponseKora
     {
+ 
         self::$app = $app;
         self::$filterKora = $filterKora;
         self::$serviceContainer = $serviceContainer;

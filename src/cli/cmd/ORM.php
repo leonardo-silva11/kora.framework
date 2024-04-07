@@ -130,6 +130,8 @@ class ORM
 
         $namespace = "app\\{$this->app['name']}\\models\\database\\entity";
 
+        $table = substr($this->cmdArgs[0],0,2) != 'TB' ? "TB{$this->cmdArgs[0]}" : $this->cmdArgs[0];
+
         $entityName = "{$this->cmdArgs[0]}Entity";
         $entity = <<<EOD
         <?php 
@@ -137,7 +139,7 @@ class ORM
         use Illuminate\Database\Eloquent\Model;
         class {$entityName} extends Model
         {
-            public \$table = '{$this->cmdArgs[0]}';
+            public \$table = '{$table}';
         }
         EOD;
 

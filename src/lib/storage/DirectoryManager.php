@@ -8,7 +8,7 @@ use kora\lib\support\OperationSystem;
 class DirectoryManager
 {
     private string $currentDrive;
-    private string $storage = "phpDefaultStorage";
+    private string $storage = "phpDefaultStorageKora";
     private $defaultDrives = 
     [
         "C:\\",
