@@ -4,6 +4,7 @@ namespace kora\bin;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\strings\Strings;
 use ReflectionClass;
+use ReflectionMethod;
 use ReflectionNamedType;
 use RuntimeException;
 
@@ -128,21 +129,14 @@ class DependencyManagerKora
 
     private function resolvedNullInstances(Array &$resolved) : void
     {
-
         foreach($resolved as $type => $instance)
         {     
             if($instance == null)
             {
-                //$key = mb_substr(strrchr($type, '\\'),1);
                 $resolved[$type] = $this->resolve($type);
-               // unset($resolved[$type]);
-                //dd($resolved);
             }
 
-       
         }
-
-       
     }
 
     private function resolveParameters(Array &$resolved,string $nameMethod)
@@ -243,5 +237,37 @@ class DependencyManagerKora
         }
         
         return $resolved;
+    }
+
+    public function filterRouteParameters
+    (
+        ControllerKora $controller,
+        string $action = null,
+        array $httpParameters = null,
+        array $routeDependencies = null
+    )
+    {
+        $action = $action ?? $this->app->getParamConfig('config.http.request.aUrl','public');
+        $httpParameters = $httpParameters ?? $this->app->getParamConfig('config.http.parameters','public');
+        $routeDependencies = $routeDependencies ?? $this->resolveRouteDependencies();
+
+        $reflection = new ReflectionMethod($controller, $action);
+        $mParameters = $reflection->getParameters();
+
+        $parameters = [];
+
+        foreach($mParameters as $param)
+        {
+            if(array_key_exists($param->name,$httpParameters))
+            {
+                $parameters[$param->name] = $httpParameters[$param->name];
+            }
+            else if(array_key_exists($param->name,$routeDependencies))
+            {
+                $parameters[$param->name] = $routeDependencies[$param->name];
+            }
+        }
+        
+        return $parameters;
     }
 }

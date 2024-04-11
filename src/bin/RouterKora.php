@@ -210,7 +210,7 @@ class RouterKora
         $serviceContainer  = new DependencyManagerKora($this->app);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
  
-        $routeDependencies = $serviceContainer->resolveRouteDependencies();
+        //$routeDependencies = $serviceContainer->resolveRouteDependencies();
         $ctrNameClass = $this->app->getParamConfig('config.http.request.namespace','public');
         $ctrNameAction = $this->app->getParamConfig('config.http.request.aUrl','public');
         
@@ -218,9 +218,9 @@ class RouterKora
 
         //$filters = $this->app->getParamConfig('config.http.filters','public');
 
-        $httpParameters = $this->app->getParamConfig('config.http.parameters','public');
-        $parameters = array_merge($httpParameters,$routeDependencies);
+       // $httpParameters = $this->app->getParamConfig('config.http.parameters','public');
 
+        $parameters = $serviceContainer->filterRouteParameters($controller);
 
         //inject app in ControllerKora class
         $refMethod = new ReflectionMethod(ControllerKora::class, 'start');

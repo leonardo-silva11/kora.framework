@@ -35,32 +35,56 @@ class ORM
     }
 
     public function config(array $args)
-    {        
-        $this->cmdArgs = array_values($args);
+    {     
+        try 
+        {
+            $this->cmdArgs = array_values($args);
 
     
-        $this->paths['entity'] = "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}";
-        $pathSettings = "{$this->paths['app']}{$this->directorySeparator}appsettings.json";
+            $this->paths['entity'] = "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}";
+            $pathSettings = file_exists("{$this->paths['app']}{$this->directorySeparator}soundconfig.json")
+                                 ? "{$this->paths['app']}{$this->directorySeparator}soundconfig.json"
+                                 : (file_exists("{$this->paths['app']}{$this->directorySeparator}appsettings.json") 
+                                      ? "{$this->paths['app']}{$this->directorySeparator}appsettings.json"
+                                      : throw new DefaultException('File {appsettings.json} not found, impossible load database configuration!',500));
+                          
 
-        if(!file_exists($pathSettings))
+            $file = json_decode(file_get_contents($pathSettings),true);
+    
+            if($file == null)
+            {
+                throw new DefaultException('Invalid file to access: {appsettings.json}!',500);
+            }
+
+            $this->settings = array_key_exists('appsettings',$file)
+                              &&
+                              !empty($file['appsettings']['path'])  
+                              &&
+                              file_exists($file['appsettings']['path'])
+                              ?
+                              json_decode(file_get_contents($file['appsettings']['path']),true)
+                              :
+                              $file;
+
+            
+            $appKey = $this->getOption('--app',$args) ?? 1;
+            $appConn = $this->getOption('--conn',$args) ?? 1;
+            $appKey = (int)$appKey;
+            $appConn = (int)$appConn;
+
+            $this->dbConfig = $this->getDatabaseConfig($appKey,$appConn);
+    
+            $this->paths = 
+            [
+                'entity' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}entity",
+                'migrations' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}migrations",
+            ];
+        } 
+        catch (\Throwable $th) 
         {
-            throw new DefaultException("File {appsettings.json} does not exists!",404);
-        }
-
-        $this->settings = json_decode(file_get_contents($pathSettings),true);
-
-        $appKey = $this->getOption('--app',$args) ?? 1;
-        $appConn = $this->getOption('--conn',$args) ?? 1;
-        $appKey = (int)$appKey;
-        $appConn = (int)$appConn;
-        
-        $this->dbConfig = $this->getDatabaseConfig($appKey,$appConn);
-
-        $this->paths = 
-        [
-            'entity' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}entity",
-            'migrations' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}migrations",
-        ];
+           $this->log->save($th->getMessage(),true);
+        }   
+      
 
     }
 
@@ -131,6 +155,7 @@ class ORM
         $namespace = "app\\{$this->app['name']}\\models\\database\\entity";
 
         $table = substr($this->cmdArgs[0],0,2) != 'TB' ? "TB{$this->cmdArgs[0]}" : $this->cmdArgs[0];
+        $primaryKey = substr($this->cmdArgs[0],0,2) != 'TB' ? "XV{$this->cmdArgs[0]}" : str_ireplace('TB','XV',$this->cmdArgs[0]);
 
         $entityName = "{$this->cmdArgs[0]}Entity";
         $entity = <<<EOD
@@ -140,6 +165,7 @@ class ORM
         class {$entityName} extends Model
         {
             public \$table = '{$table}';
+            protected \$primaryKey = '{$primaryKey}';
         }
         EOD;
 
