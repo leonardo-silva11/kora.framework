@@ -7,6 +7,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use JmesPath\Env;
 use kora\lib\collections\Collections;
 use kora\lib\exceptions\DefaultException;
+use kora\lib\storage\DirectoryManager;
 use kora\lib\strings\Strings;
 use kora\lib\ViewTemplate\Template;
 use ReflectionClass;
@@ -20,32 +21,47 @@ class RouterKora
     private string $projectPath;
     private string $appPath;
     private AppKora $app;
-    //private Array $appSettings;
     private RequestKora $RequestKora;
     private FilterKora $FilterKora;
 
 
-    private function __construct(string $pathSettings)
+    private function __construct(\Main $main)
     {
         RouterKora::$request = Request::createFromGlobals();
 
         $this->projectPath = dirname(__DIR__,5);
         $this->appPath = "$this->projectPath/app";
 
-        $appSettings = $this->getAppSettings($pathSettings);
-        $this->config($appSettings);
-     
+        $this->config($main);     
     }
 
-    private function config(Array $appSettings)
+    private function config(\Main $main)
     {
+
+        $defaultStorage = $main->getDefaultStorage();    
+        $pathSettings = "{$defaultStorage->getCurrentStorage()}{$defaultStorage->getDirectorySeparator()}appsettings.json";
+
+        if(!file_exists($pathSettings))
+        {
+            throw new DefaultException("{{$pathSettings}} not found!");
+        }
+
+        $appSettings = $this->getAppSettings($pathSettings);
+        $project = $main->getProject();
+
         $rqstUri = RouterKora::$request->getRequestUri();
 
         $parseUri = $this->uriToCollection($rqstUri);
         
         $defaultApp = $rqstUri === '/' || !$this->isApp($parseUri[0],$appSettings);
         
-        $this->parseApp($parseUri,$defaultApp,$appSettings);
+        $this->parseApp
+        (
+            $parseUri,
+            $defaultApp,
+            $appSettings,
+            $defaultStorage
+        );
     }
 
     private function uriToCollection(string $rqstUri) : array
@@ -142,7 +158,13 @@ class RouterKora
         $this->callController();
     }
 
-    private function parseApp(array $parseUri, bool $isDefault, array $appSettings)
+    private function parseApp
+    (
+        array $parseUri, 
+        bool $isDefault, 
+        array $appSettings, 
+        DirectoryManager $defaultStorage
+    )
     {
         $env = new Env();
 
@@ -191,7 +213,8 @@ class RouterKora
                 'segmentPath' => explode('/',$defaultRoute['defaultRoute']),
             ],
             'settings' => $appConfig,
-            'request' => self::$request
+            'request' => self::$request,
+            'defaultStorage' => $defaultStorage
         ];
 
         $this->app = new $namespace(RouterKora::$request);
@@ -261,11 +284,12 @@ class RouterKora
         return $settings;
     }
 
-    public static function start($pathSettings)
+    public static function start(\Main $main)
     {
+
         if(empty(RouterKora::$instance))
         {
-            RouterKora::$instance = new RouterKora($pathSettings);
+            RouterKora::$instance = new RouterKora($main);
         }
     }
 }
