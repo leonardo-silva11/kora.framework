@@ -233,16 +233,10 @@ class RouterKora
         $serviceContainer  = new DependencyManagerKora($this->app);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
  
-        //$routeDependencies = $serviceContainer->resolveRouteDependencies();
         $ctrNameClass = $this->app->getParamConfig('config.http.request.namespace','public');
         $ctrNameAction = $this->app->getParamConfig('config.http.request.aUrl','public');
         
         $controller = new $ctrNameClass(...$constructorDependencies);
-
-        //$filters = $this->app->getParamConfig('config.http.filters','public');
-
-       // $httpParameters = $this->app->getParamConfig('config.http.parameters','public');
-
         $parameters = $serviceContainer->filterRouteParameters($controller);
 
         //inject app in ControllerKora class
@@ -259,7 +253,6 @@ class RouterKora
       
         $keyBeforeFilter = "{$filterResponseBefore->__getShortName()}Before";
         $parameters[$keyBeforeFilter] = $filterResponseBefore;
-
         $responseController = $controller->$ctrNameAction(...$parameters);
 
         if($responseController instanceof Response)

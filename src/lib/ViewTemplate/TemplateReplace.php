@@ -46,6 +46,10 @@ class TemplateReplace
                         'val' => $v 
                     ];
              }
+             else if(is_array($v))
+             {
+                $this->addAll($v);
+             }
         }
     }
 

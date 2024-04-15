@@ -104,7 +104,12 @@ class RequestKora
         $this->app->setParamConfig('config.http.request.urlViews',"{$baseUrl}/app/{$appName}/views");
         $this->app->setParamConfig('config.http.request.urlView',"{$baseUrl}/app/{$appName}/views/{$cUrl}");
         $this->app->setParamConfig('config.http.request.urlViewsSections',"{$baseUrl}/app/{$appName}/views/sections");
-        $this->app->setParamConfig('config.http.request.urlViewsTemplates',"{$baseUrl}/app/{$appName}/views/templates");
+        $this->app->setParamConfig('config.http.request.urlPublicTemplates',"{$baseUrl}/app/{$appName}/public/templates");
+        $this->app->setParamConfig('config.http.request.urlPublicAssets',"{$baseUrl}/app/{$appName}/public/assets");
+        $this->app->setParamConfig('config.http.request.urlPublicAssetsCss',"{$baseUrl}/app/{$appName}/public/assets/css");
+        $this->app->setParamConfig('config.http.request.urlPublicAssetsJs',"{$baseUrl}/app/{$appName}/public/assets/js");
+        $this->app->setParamConfig('config.http.request.urlPublicAssetsImg',"{$baseUrl}/app/{$appName}/public/assets/img");
+        $this->app->setParamConfig('config.http.request.urlPublicAssetsFonts',"{$baseUrl}/app/{$appName}/public/assets/fonts");
     }
 
     public function paramsRequest()

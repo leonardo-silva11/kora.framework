@@ -10,15 +10,14 @@ class Template
 
     public function __construct(array $config)
     {
-        $this->validateConfig($config);
         $this->config = $config;
         $this->config['directorySeparator'] = DIRECTORY_SEPARATOR;
-        //$this->config['template'] = !empty($this->config['template']) ? $this->config['template'] : 'default';
-        $nameTemplate = $this->config['template'];
+        $nameTemplate = $this->config['views']['currentTemplate'];
         
         $this->config['viewsPath'] = "{$this->config['appPath']}{$this->config['directorySeparator']}views";
+        $this->config['publicPath'] = "{$this->config['appPath']}{$this->config['directorySeparator']}public";
         $this->config['viewPath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}{$this->config['cUrl']}{$this->config['directorySeparator']}{$nameTemplate}";
-        $this->config['templatePath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}templates{$this->config['directorySeparator']}{$nameTemplate}";
+        $this->config['templatePath'] = "{$this->config['publicPath']}{$this->config['directorySeparator']}templates{$this->config['directorySeparator']}{$nameTemplate}";
         $this->config['sectionsPath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}sections{$this->config['directorySeparator']}{$nameTemplate}";
 
         if(!is_dir($this->config['viewPath']))
@@ -29,29 +28,13 @@ class Template
         $this->config['pages'] = [];
         $this->config['pagesPath'] = [];
 
-        $pageName = "{$this->config['aUrl']}.{$this->config['defaultPageExtension']}";
+        $pageName = "{$this->config['aUrl']}.{$this->config['views']['defaultPageExtension']}";
         $this->config['pageName'] = $pageName;
 
         $this->parsePages($pageName,'viewPath');
         $this->joinPages();
 
         $this->replace = new TemplateReplace($this);
-    }
-
-    private function validateConfig($config)
-    {
-        $keys = [
-            'appPath',
-            'template'
-        ];
-
-        foreach($keys as $key)
-        {
-            if(!array_key_exists($key,$config))
-            {
-                throw new DefaultException("{$key} not found in config!",404);
-            }
-        }
     }
 
     private function parsePages(string $pageName, string $keyPathDirectory, string $parent = null, $tag = null)
