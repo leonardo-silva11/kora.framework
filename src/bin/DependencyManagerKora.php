@@ -56,25 +56,62 @@ class DependencyManagerKora
                 $dependencies[] = $injectables[$parameter->getName()];
             }
             else
-            {
+            {         
                 $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() 
-                : (array_key_exists($parameterType->getName(),$this->defaultValues) ? $this->defaultValues[$parameterType->getName()] : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));    
-            }    
+                : (array_key_exists($parameterType->getName(),$this->defaultValues) 
+                ? $this->defaultValues[$parameterType->getName()] 
+                : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));    
+                
+            }   
+            
+    
         }
     }
 
-    public function resolve(String $namespaceClass)
+    private function resolveDependencyAlias(string $namespaceClass)
     {
-        $reflectionClass = new ReflectionClass($namespaceClass);
+        $response = [
+            'namespace' => $namespaceClass,
+            'alias' => basename(str_replace('\\', '/', $namespaceClass))
+        ];
+
+        $parts = explode(chr(32),$namespaceClass);
+        $filteredParts = array_values(array_filter($parts));
+        $count = count($filteredParts);
+
+        if($count != 1 && $count != 3)
+        {
+            throw new RuntimeException("Invalid definition for dependency {$namespaceClass}!");
+        }
+
+        if($count === 3)
+        {
+            $response = [
+                'namespace' => $filteredParts[0],
+                'alias' => $filteredParts[2]
+            ];
+        }
+
+        return $response;
+    }
+
+    public function resolve(string $namespaceClass)
+    {
+        
+        $aliasDependency = $this->resolveDependencyAlias($namespaceClass);
+
+        $reflectionClass = new ReflectionClass($aliasDependency['namespace']);
 
         if (!$reflectionClass->isInstantiable()) {
-            throw new RuntimeException("Class {$namespaceClass} is not instantiable.");
+            throw new RuntimeException("Class {$aliasDependency['namespace']} is not instantiable.");
         }
 
         $constructor = $reflectionClass->getConstructor();
 
-        if (!$constructor) {
-            return new $namespaceClass();
+        if (!$constructor) 
+        {
+            $nameClass = $aliasDependency['namespace']; 
+            return new $nameClass();
         }
 
      
@@ -112,19 +149,36 @@ class DependencyManagerKora
 
     private function resolveCretedInstances(Array &$resolved, string $nameMethod) : void
     {
+
         $objects = $this->extract($this->services[$nameMethod],'object');
- 
+
         $injectables = $this->app->injectables();
 
         for($i = 0; $i < count($objects); ++$i)
         {
             $resolved[$objects[$i]] = null;
-
+            
             if(array_key_exists($objects[$i],$injectables))
             {   
                 $resolved[$objects[$i]] = $injectables[$objects[$i]];
             }
+            else
+            {
+                $info = $this->resolveDependencyAlias($objects[$i]);
+
+                foreach($injectables as $instanceInjectable)
+                {
+                    $typeClass = get_class($instanceInjectable);
+
+                    if($typeClass === $info['namespace'])
+                    {
+                        $resolved[$objects[$i]] = $instanceInjectable;
+                    }
+                }
+            }
+   
         }
+        
     }
 
     private function resolvedNullInstances(Array &$resolved) : void
@@ -167,9 +221,11 @@ class DependencyManagerKora
 
         foreach($resolvedDependencies as $k => $dependency)
         {
-            $key = mb_substr(strrchr($k, '\\'),1);
+            $info = $this->resolveDependencyAlias($k);
+           // $key = mb_substr(strrchr($k, '\\'),1);
 
-            $dependencies[$key] = $dependency;
+           // $dependencies[$key] = $dependency;
+           $dependencies[$info['alias']] = $dependency;
         }
 
         return $dependencies;
@@ -205,7 +261,61 @@ class DependencyManagerKora
         return $this->prepareDependencies($resolved);
     }
 
-    public function resolveFiltersDependencies($type) : array
+    private function resolveInstance(string $type, string $filterClass, string $method, array &$resolved)
+    {
+        $filters = $this->app->getParamConfig("config.http.filters.{$type}",'public',false);
+
+        $filter = array_map(function($item) use($filterClass){
+            return $item['class'] == $filterClass ? $item['methods'] : [];
+        },$filters);
+
+
+        if
+            (
+                !empty($filter) 
+                && 
+                !empty($filterClass) 
+                && 
+                !empty($method) 
+                && 
+                in_array($method,$filter[0])
+            )
+        {
+
+            if(array_key_exists($method,$this->services))
+            {
+                $resolved[$type][$method] = [];
+
+                $this->resolveCretedInstances($resolved[$type][$method], $method);
+                $this->resolvedNullInstances($resolved[$type][$method]);
+                $this->resolveParameters($resolved[$type][$method], $method);
+                $resolved[$type][$method] = $this->prepareDependencies($resolved[$type][$method]);  
+            }
+
+        }
+
+        return $resolved;
+    } 
+
+    public function resolveSingleFiltersDependencies(string $type, string $filterClass, string $method) : array
+    {
+        $resolved = [
+            'before' => [],
+            'after' => []
+        ];
+
+        $this->resolveInstance
+        (
+            $type,
+            $filterClass,
+            $method,
+            $resolved
+        );
+
+        return $resolved;
+    }
+
+    public function resolveFiltersDependencies(string $type) : array
     {
         $resolved = [
             'before' => [],
@@ -220,19 +330,28 @@ class DependencyManagerKora
         $filters = $this->app->getParamConfig("config.http.filters.{$type}",'public',false);
 
         foreach($filters as $filter)
-        {
+        { 
             for($i = 0; $i < count($filter['methods']); ++$i)
             {
-                $aUrl = $filter['methods'][$i];
-
+                
+                    $this->resolveInstance
+                    (
+                        $type,
+                        $filter['class'],
+                        $filter['methods'][$i],
+                        $resolved
+                    );
+                /*$aUrl = $filter['methods'][$i];
+           
                 if(array_key_exists($aUrl,$this->services))
                 {
+
                     $resolved[$type][$aUrl] = [];
                     $this->resolveCretedInstances($resolved[$type][$aUrl], $aUrl);
                     $this->resolvedNullInstances($resolved[$type][$aUrl]);
                     $this->resolveParameters($resolved[$type][$aUrl], $aUrl);
                     $resolved[$type][$aUrl] = $this->prepareDependencies($resolved[$type][$aUrl]);
-                }
+                }*/
             }
         }
         

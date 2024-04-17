@@ -73,12 +73,17 @@ class ORM
             $appConn = (int)$appConn;
 
             $this->dbConfig = $this->getDatabaseConfig($appKey,$appConn);
-    
+
             $this->paths = 
             [
+                'defaultDirectoryPath' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database",
+                'defaultDirectoryEntityPath' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}entity",
+                'defaultDirectoryMigrationsPath' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}migrations",
                 'entity' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}entity",
                 'migrations' => "{$this->paths['app']}{$this->directorySeparator}app{$this->directorySeparator}{$this->app['name']}{$this->directorySeparator}models{$this->directorySeparator}database{$this->directorySeparator}migrations",
             ];
+
+            $this->createDirectories();
         } 
         catch (\Throwable $th) 
         {
@@ -86,6 +91,20 @@ class ORM
         }   
       
 
+    }
+
+    private function createDirectories()
+    {
+        if(!is_dir($this->paths['defaultDirectoryEntityPath']))
+        {
+            mkdir($this->paths['defaultDirectoryEntityPath'],0774,true);
+        }
+
+        if(!is_dir($this->paths['defaultDirectoryMigrationsPath']))
+        {
+         
+            mkdir($this->paths['defaultDirectoryMigrationsPath'],0774,true);
+        }
     }
 
 

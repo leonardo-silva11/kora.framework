@@ -13,10 +13,11 @@ class Template
         $this->config = $config;
         $this->config['directorySeparator'] = DIRECTORY_SEPARATOR;
         $nameTemplate = $this->config['views']['currentTemplate'];
-        
+        $directoryView = $this->config['currentPage']['directoryView'];
+
         $this->config['viewsPath'] = "{$this->config['appPath']}{$this->config['directorySeparator']}views";
         $this->config['publicPath'] = "{$this->config['appPath']}{$this->config['directorySeparator']}public";
-        $this->config['viewPath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}{$this->config['cUrl']}{$this->config['directorySeparator']}{$nameTemplate}";
+        $this->config['viewPath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}{$directoryView}{$this->config['directorySeparator']}{$nameTemplate}";
         $this->config['templatePath'] = "{$this->config['publicPath']}{$this->config['directorySeparator']}templates{$this->config['directorySeparator']}{$nameTemplate}";
         $this->config['sectionsPath'] = "{$this->config['viewsPath']}{$this->config['directorySeparator']}sections{$this->config['directorySeparator']}{$nameTemplate}";
 

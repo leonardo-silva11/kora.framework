@@ -250,9 +250,8 @@ class RouterKora
         $m1->setAccessible(true);
         $filterResponseBefore = $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
         $m1->setAccessible(false);
-      
-        $keyBeforeFilter = "{$filterResponseBefore->__getShortName()}Before";
-        $parameters[$keyBeforeFilter] = $filterResponseBefore;
+
+        $parameters[$filterResponseBefore->getName()] = $filterResponseBefore;
         $responseController = $controller->$ctrNameAction(...$parameters);
 
         if($responseController instanceof Response)

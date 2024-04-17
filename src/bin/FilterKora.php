@@ -74,6 +74,41 @@ class FilterKora
         $this->app->setParamConfig('config.http.filters',$filterCollection);
     }
 
+    public function callSingleFilter(ControllerKora $instance, Array $filter, string $method, Array $services, String $type)
+    {
+        if(!in_array($type,['before','after']))
+        {
+            throw new DefaultException("allowed type filters are: (before) and (after)!",400);
+        }
+
+        if(!in_array($filter['namespace'], class_uses($instance)))
+        {
+            throw new DefaultException(sprintf("Controller {%s} does not contains definition for {%s} Filter!",$instance::class,$filter['class']),404);
+        }
+
+        if(in_array($method,$filter['methods']))
+        {
+            $params = [];
+
+            if(array_key_exists($method,$services[$type]))
+            {
+                $params = $services[$type][$method];
+            }
+            
+            try 
+            {
+                $responseFilter[$method] = $instance->$method(...$params);
+            } 
+            catch (\Throwable $th) 
+            {
+                throw new DefaultException(sprintf("{%s} ocurred when call filter {%s}::{%s}!",$th->getMessage(),$instance::class, $method),500);
+            }
+    
+        }
+    
+        return new FilterResponseKora($type,$responseFilter);
+    }
+
     public function callFilter(ControllerKora $instance, Array $filters, Array $services, String $type)
     {
         if(!in_array($type,['before','after']))
@@ -92,12 +127,11 @@ class FilterKora
 
         foreach($callFilters as $k => $filter)
         {
-            
             if(!in_array($filter['namespace'], class_uses($instance)))
             {
                 throw new DefaultException(sprintf("Controller {%s} does not contains definition for {%s} Filter!",$instance::class,$filter['class']),404);
             }
-
+     
             foreach($filter['methods'] as $mtd)
             {
                 $params = [];
@@ -115,7 +149,7 @@ class FilterKora
                 {
                     throw new DefaultException(sprintf("{%s} ocurred when call filter {%s}::{%s}!",$th->getMessage(),$instance::class, $mtd),500);
                 }
-               
+     
             }
         }
 

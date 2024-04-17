@@ -11,8 +11,9 @@ class FilterResponseKora
     ];
 
     private string $typeFilter;
+    private string $name;
 
-    public function __construct($typeFilter, array $response)
+    public function __construct(string $typeFilter, array $response)
     {
         if(!array_key_exists($typeFilter,$this->response))
         {
@@ -21,6 +22,12 @@ class FilterResponseKora
 
         $this->response[$typeFilter] = $response;
         $this->typeFilter = $typeFilter;
+
+        $method = key($response);
+        $sufix =  ucfirst($this->typeFilter);
+        $this->name = "{$method}{$sufix}";
+
+        return $this;
     }
 
     public function getReponse($key = null)
@@ -28,8 +35,8 @@ class FilterResponseKora
         return array_key_exists($key,$this->response[$this->typeFilter]) ? $this->response[$this->typeFilter][$key] : $this->response[$this->typeFilter];
     }
 
-    public function __getShortName()
+    public function getName()
     {
-        return (new \ReflectionClass($this))->getShortName();
+        return $this->name;
     }
 }

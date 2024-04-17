@@ -2,6 +2,7 @@
 namespace kora\lib\storage;
 
 use Exception;
+use kora\lib\exceptions\DefaultException;
 use kora\lib\strings\Strings;
 use kora\lib\support\OperationSystem;
 
@@ -9,6 +10,7 @@ class DirectoryManager
 {
     private string $currentDrive;
     private string $storage = "phpDefaultStorageKora";
+    private $currentStorage;
     private $defaultDrives = 
     [
         "C:\\",
@@ -46,15 +48,22 @@ class DirectoryManager
         $this->currentDrive = $drive;
     }
 
-    private function loadStorage()
+    private function saveDirectory($path)
     {
-        $path = $this->getCurrentStorage();
-
+ 
         if(!is_dir($path))
-        {
+        {      
             mkdir($path,0770);
             chmod($path,0770);
         }
+
+        $this->currentStorage = $path;
+    }
+
+    private function loadStorage()
+    {
+        $path = $this->getCurrentStorage();
+        $this->saveDirectory($path);
     }
 
     public function getDrive()
@@ -67,9 +76,26 @@ class DirectoryManager
         return DIRECTORY_SEPARATOR;
     }
 
-    public function getCurrentStorage()
+    public function newStorage(string $directory)
     {
-        return "{$this->currentDrive}{$this->getDirectorySeparator()}{$this->storage}";
+        $directory = $directory ?? new DefaultException("Diretório inválido!",403);
+
+        $basePathArray = explode($this->getDirectorySeparator(),$this->getCurrentStorage());
+        $basePathArray = array_values(array_filter($basePathArray));
+        unset($basePathArray[0]);
+        $basePathArray = array_values($basePathArray);
+        $basePath = implode($this->getDirectorySeparator(),$basePathArray);
+
+        return new DirectoryManager("{$basePath}{$this->getDirectorySeparator()}{$directory}");
     }
 
+    public function getCurrentStorage()
+    {
+        return  !empty($this->currentStorage) ? $this->currentStorage : "{$this->currentDrive}{$this->getDirectorySeparator()}{$this->storage}";
+    }
+
+    public function __clone()
+    {
+        return clone $this;
+    }
 }

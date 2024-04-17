@@ -5,4 +5,5 @@ class Strings
 {
     public const empty = "";
     public const emptyJson = "{}";
+    public const slash = '/';
 }

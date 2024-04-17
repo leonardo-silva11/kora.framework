@@ -14,6 +14,7 @@ abstract class AppKora
         'private' => []
     ];
     
+    protected array $injectables = [];
     public static string $directorySeparator = DIRECTORY_SEPARATOR;
     
     protected function __construct(AppKora $app, Request $request)
@@ -41,7 +42,21 @@ abstract class AppKora
 
     public abstract function extraConfig() : void;
 
-    public abstract function injectables() : array;
+    public function injectables(): array
+    {
+        return $this->injectables;
+    }
+
+    public function addInjectable(string $key, mixed $item)
+    {
+        if(!array_key_exists($key,$this->injectables) && !empty($key) && !empty($item))
+        {
+            $this->injectables[$key] = $item;
+            return true;
+        }
+
+        return false;
+    }
 
     private function getAppShortName(AppKora $app) : string
     {

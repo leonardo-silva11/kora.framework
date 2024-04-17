@@ -6,12 +6,12 @@ use kora\lib\exceptions\DefaultException;
 class IntermediatorResponseKora
 {
     private array $response;
-    public function __construct(array $data, array $config, FilterResponseKora $filterResponseKoraAfter)
+    public function __construct(array $data, array $config, BagKora $filterResponseKoraAfter)
     {
         $this->response =  [
             'data' => $data,
             'config' => $config,
-            'filter' => $filterResponseKoraAfter->getReponse()
+            'filter' => $filterResponseKoraAfter
         ];
     }
 

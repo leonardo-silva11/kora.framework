@@ -2,6 +2,7 @@
 namespace kora\bin;
 
 use kora\lib\exceptions\DefaultException;
+use kora\lib\strings\Strings;
 use ReflectionObject;
 
 abstract class IntermediatorKora
@@ -27,18 +28,35 @@ abstract class IntermediatorKora
         return $this->intermediator;
     }
 
+    private function getCurrentPage()
+    {
+        $shortName = basename(str_ireplace(['\\'],['/'],$this->intermediator::class));
+        $viewName = str_ireplace(['\\','Intermediator'],['/',Strings::empty],$shortName);
+        $directoryView = mb_strtolower($viewName);
+        return [
+            'fullName' => $this->intermediator::class,
+            'shortName' => $shortName,
+            'viewName' =>  $viewName,
+            'directoryView' => $directoryView
+        ];
+    }
+
     private function config()
     {
         $appNameClass = self::$app->getParamConfig('config.className','public');
         $config = self::$app->getParamConfig('config.http.request','public');
         $settings = self::$app->getParamConfig("appSettings.apps.{$appNameClass}",'public');
         $this->bagConfig = array_merge($config,$settings);
+        $this->bagConfig['currentPage'] = $this->getCurrentPage();
+
     }
 
     private function callAction(array $data, ?string $template)
     {
         $filterResponseAfter = self::callFilter('after');
-        $aUrl = self::$app->getParamConfig('config.http.request.aUrl','public');
+       
+        $aUrl = $this->intermediator->getAction()  ?? 
+                    self::$app->getParamConfig('config.http.request.aUrl','public');
 
         if(!method_exists($this->intermediator,$aUrl))
         {
@@ -68,7 +86,6 @@ abstract class IntermediatorKora
                                                        : (!empty($this->bagConfig['views']['defaultTemplate']) ? $this->bagConfig['views']['defaultTemplate'] : throw new DefaultException('No valid templates found!',404));
 
         $response = new IntermediatorResponseKora($data, $this->bagConfig, $filterResponseAfter);
-
         $reflectionObject = new ReflectionObject($this->intermediator);
         $reflectionMethod = $reflectionObject->getMethod($aUrl);
         $paramMethod = $reflectionMethod->getParameters();
@@ -98,21 +115,42 @@ abstract class IntermediatorKora
             DependencyManagerKora $serviceContainer, 
             FilterKora $filterKora,
             ControllerKora $controller
-        ) : FilterResponseKora
+        ) : BagKora
     {
  
         self::$app = $app;
         self::$filterKora = $filterKora;
         self::$serviceContainer = $serviceContainer;
         self::$controller = $controller;
-
+   
         return self::callFilter('before');
     }
 
-    private static function callFilter(string $key) : FilterResponseKora
+    private static function callFilter(string $key) : BagKora
     {
         $filters = self::$app->getParamConfig('config.http.filters','public');
-        $services = self::$serviceContainer->resolveFiltersDependencies($key);
-        return self::$filterKora->callFilter(self::$controller,$filters,$services,$key);
+
+        $nameBag = sprintf("filters%s",ucfirst($key));
+        $bag = new BagKora($nameBag);
+
+        if(array_key_exists($key,$filters))
+        {
+            foreach($filters[$key] as $filter)
+            {
+                $methods = $filter['methods'];
+               
+                for($i = 0; $i < count($methods); ++$i)
+                {
+                    $class = $filter['class'];
+                    $method = $methods[$i];
+                    $services = self::$serviceContainer->resolveSingleFiltersDependencies($key,$class,$method);
+                    $response = self::$filterKora->callSingleFilter(self::$controller,$filter,$methods[$i],$services,$key);
+                    self::$app->addInjectable($response->getName(),$response);
+                    $bag->add($response->getName(),$response);
+                }
+            }
+        }
+
+        return $bag;
     }
 }
