@@ -76,6 +76,16 @@ class DirectoryManager
         return DIRECTORY_SEPARATOR;
     }
 
+    public function directoryExists(string $directoryName) : bool
+    {
+        if(empty($directoryName))
+        {
+            throw new DefaultException("directory name is empty!",403);
+        }
+
+        return is_dir("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directoryName}");
+    }
+
     public function newStorage(string $directory)
     {
         $directory = $directory ?? new DefaultException("Diretório inválido!",403);

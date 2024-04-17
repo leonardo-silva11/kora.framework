@@ -20,6 +20,10 @@ abstract class IntermediatorKora
         {
             throw new DefaultException(sprintf("An instance of {%s} is expected!",IntermediatorKora::class),500);
         }
+        else if(!stripos(IntermediatorKora::class, 'Intermediator'))
+        {
+            throw new DefaultException(sprintf("Invalid name {%s}. The intermediate class must contain the suffix or prefix {Intermediator} in its name!",IntermediatorKora::class),500);
+        }
 
         $this->intermediator = $intermediator; 
         
@@ -33,11 +37,15 @@ abstract class IntermediatorKora
         $shortName = basename(str_ireplace(['\\'],['/'],$this->intermediator::class));
         $viewName = str_ireplace(['\\','Intermediator'],['/',Strings::empty],$shortName);
         $directoryView = mb_strtolower($viewName);
+        $aUrl = $this->intermediator->getAction()  ?? 
+                    self::$app->getParamConfig('config.http.request.aUrl','public');
+
         return [
             'fullName' => $this->intermediator::class,
             'shortName' => $shortName,
             'viewName' =>  $viewName,
-            'directoryView' => $directoryView
+            'directoryView' => $directoryView,
+            'action' => $aUrl
         ];
     }
 
@@ -46,6 +54,12 @@ abstract class IntermediatorKora
         $appNameClass = self::$app->getParamConfig('config.className','public');
         $config = self::$app->getParamConfig('config.http.request','public');
         $settings = self::$app->getParamConfig("appSettings.apps.{$appNameClass}",'public');
+      
+        if(array_key_exists('connectionStrings',$settings))
+        {
+            unset($settings['connectionStrings']);
+        }
+
         $this->bagConfig = array_merge($config,$settings);
         $this->bagConfig['currentPage'] = $this->getCurrentPage();
 
@@ -55,8 +69,7 @@ abstract class IntermediatorKora
     {
         $filterResponseAfter = self::callFilter('after');
        
-        $aUrl = $this->intermediator->getAction()  ?? 
-                    self::$app->getParamConfig('config.http.request.aUrl','public');
+        $aUrl = $this->bagConfig['currentPage']['action'];
 
         if(!method_exists($this->intermediator,$aUrl))
         {
@@ -85,23 +98,22 @@ abstract class IntermediatorKora
                                                        ? $template 
                                                        : (!empty($this->bagConfig['views']['defaultTemplate']) ? $this->bagConfig['views']['defaultTemplate'] : throw new DefaultException('No valid templates found!',404));
 
-        $response = new IntermediatorResponseKora($data, $this->bagConfig, $filterResponseAfter);
-        $reflectionObject = new ReflectionObject($this->intermediator);
-        $reflectionMethod = $reflectionObject->getMethod($aUrl);
-        $paramMethod = $reflectionMethod->getParameters();
+        $request = self::$app->getParamConfig('config.request','public');
+        $response = new IntermediatorResponseKora($data, $this->bagConfig, $filterResponseAfter, $request);
 
-        if($paramMethod[0]->getType() != IntermediatorResponseKora::class)
+
+        if(!$response->isRequestAjax())
         {
-            throw new DefaultException
-                    (sprintf("the method {%s::%s} must provide for receiving parameter {%s}, {%s} given!",
-                        $this->intermediator::class,
-                        $aUrl,
-                        IntermediatorResponseKora::class,
-                        $paramMethod[0]->getType()
-                    ),404);
+            $response->reponseView
+            (
+                new ReflectionObject($this->intermediator),
+                $aUrl
+            );
         }
-
-        $this->intermediator->{$aUrl}($response);
+        else
+        {
+            return $response->getJsonReponse();
+        }
     } 
   
     public function view(array $data = [], $template = null)
@@ -117,19 +129,17 @@ abstract class IntermediatorKora
             ControllerKora $controller
         ) : BagKora
     {
- 
         self::$app = $app;
         self::$filterKora = $filterKora;
         self::$serviceContainer = $serviceContainer;
         self::$controller = $controller;
-   
+
         return self::callFilter('before');
     }
 
     private static function callFilter(string $key) : BagKora
     {
         $filters = self::$app->getParamConfig('config.http.filters','public');
-
         $nameBag = sprintf("filters%s",ucfirst($key));
         $bag = new BagKora($nameBag);
 

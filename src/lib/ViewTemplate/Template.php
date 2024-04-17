@@ -29,9 +29,8 @@ class Template
         $this->config['pages'] = [];
         $this->config['pagesPath'] = [];
 
-        $pageName = "{$this->config['aUrl']}.{$this->config['views']['defaultPageExtension']}";
+        $pageName = "{$this->config['currentPage']['action']}.{$this->config['views']['defaultPageExtension']}";
         $this->config['pageName'] = $pageName;
-
         $this->parsePages($pageName,'viewPath');
         $this->joinPages();
 

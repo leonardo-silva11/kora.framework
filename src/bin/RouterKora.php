@@ -232,12 +232,11 @@ class RouterKora
         $this->app->extraConfig();
         $serviceContainer  = new DependencyManagerKora($this->app);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
- 
+
         $ctrNameClass = $this->app->getParamConfig('config.http.request.namespace','public');
         $ctrNameAction = $this->app->getParamConfig('config.http.request.aUrl','public');
         
         $controller = new $ctrNameClass(...$constructorDependencies);
-        $parameters = $serviceContainer->filterRouteParameters($controller);
 
         //inject app in ControllerKora class
         $refMethod = new ReflectionMethod(ControllerKora::class, 'start');
@@ -248,10 +247,13 @@ class RouterKora
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
-        $filterResponseBefore = $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
+        $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
         $m1->setAccessible(false);
 
-        $parameters[$filterResponseBefore->getName()] = $filterResponseBefore;
+        //resolver os parãmetros da rota principal após chamar rotas prévias
+        $parameters = $serviceContainer->filterRouteParameters($controller);
+      //  $parameters[$filterResponseBefore->getName()] = $filterResponseBefore;
+        //dd($parameters);
         $responseController = $controller->$ctrNameAction(...$parameters);
 
         if($responseController instanceof Response)

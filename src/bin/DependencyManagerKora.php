@@ -20,7 +20,7 @@ class DependencyManagerKora
         $this->app = $app;
         $cUrl = $this->app->getParamConfig("config.http.request.cUrl",'public');
         $this->services = $this->app->getParamConfig("routes.{$cUrl}.services","protected",false) ?? [];
-    
+
         $this->defaultValues = 
         [
             "string" => Strings::empty,
@@ -40,7 +40,6 @@ class DependencyManagerKora
 
     private function resolveBuiltInDependencies(Array &$dependencies, $parameterType, $parameter)
     {
-
         if 
         (
             $parameterType === null 
@@ -63,8 +62,6 @@ class DependencyManagerKora
                 : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));    
                 
             }   
-            
-    
         }
     }
 
@@ -99,9 +96,9 @@ class DependencyManagerKora
     {
         
         $aliasDependency = $this->resolveDependencyAlias($namespaceClass);
-
+       
         $reflectionClass = new ReflectionClass($aliasDependency['namespace']);
-
+       
         if (!$reflectionClass->isInstantiable()) {
             throw new RuntimeException("Class {$aliasDependency['namespace']} is not instantiable.");
         }
@@ -114,10 +111,10 @@ class DependencyManagerKora
             return new $nameClass();
         }
 
-     
+    
         $parameters = $constructor->getParameters();
         $dependencies = [];
-
+ 
         foreach ($parameters as $parameter) 
         {
             $parameterType = $parameter->getType();
@@ -142,7 +139,7 @@ class DependencyManagerKora
                 throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()} in class $namespaceClass.");
             }
         }
-
+       // dd('resolve',$aliasDependency,$namespaceClass,$dependencies,$this->app->injectables());
         return $reflectionClass->newInstanceArgs($dependencies);
     }
 
@@ -268,7 +265,6 @@ class DependencyManagerKora
         $filter = array_map(function($item) use($filterClass){
             return $item['class'] == $filterClass ? $item['methods'] : [];
         },$filters);
-
 
         if
             (
