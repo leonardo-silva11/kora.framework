@@ -18,7 +18,9 @@ class Fingerprint
         'accept-encoding'
     ];
 
-    private array $filtereds = [
+    private array $filtereds = 
+    [
+        'content-type',
         'postman-token',
         'cookie'
     ];

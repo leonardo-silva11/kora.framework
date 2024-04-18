@@ -60,6 +60,25 @@ class DirectoryManager
         $this->currentStorage = $path;
     }
 
+    public function back()
+    {
+        $path = dirname($this->getCurrentStorage());
+        $this->currentStorage = $path;
+    }
+
+    public function forward(string $directory): bool
+    {
+        $cd = false;
+
+        if($this->directoryExists($directory))
+        {
+            $this->currentStorage .= "{$this->getDirectorySeparator()}{$directory}";
+            $cd = true;
+        }
+
+        return $cd;
+    }
+
     private function loadStorage()
     {
         $path = $this->getCurrentStorage();

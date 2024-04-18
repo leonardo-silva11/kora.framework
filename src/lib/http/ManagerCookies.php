@@ -60,7 +60,6 @@ class ManagerCookies
 
             $Response->headers->setCookie($newCookie);
             $Response->send();
-           
         }
     }
 }

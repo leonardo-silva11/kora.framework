@@ -12,7 +12,7 @@ class Template
     {
         $this->config = $config;
         $this->config['directorySeparator'] = DIRECTORY_SEPARATOR;
-        $nameTemplate = $this->config['views']['currentTemplate'];
+        $nameTemplate = $this->config['currentPage']['template'];
         $directoryView = $this->config['currentPage']['directoryView'];
 
         $this->config['viewsPath'] = "{$this->config['appPath']}{$this->config['directorySeparator']}views";

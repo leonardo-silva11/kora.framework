@@ -13,9 +13,17 @@ abstract class IntermediatorKora
     private static ControllerKora $controller;
     private IntermediatorKora $intermediator;
     private array $bagConfig = [];
+    protected ?string $action;
 
-    protected function __construct(IntermediatorKora $intermediator)
+    public function getAction()
     {
+        return $this->action;
+    }
+
+    protected function __construct(IntermediatorKora $intermediator, ?string $action)
+    {
+        $this->action = $action;
+
         if (!($intermediator instanceof IntermediatorKora)) 
         {
             throw new DefaultException(sprintf("An instance of {%s} is expected!",IntermediatorKora::class),500);
@@ -32,7 +40,7 @@ abstract class IntermediatorKora
         return $this->intermediator;
     }
 
-    private function getCurrentPage()
+    private function getCurrentPage(mixed $template)
     {
         $shortName = basename(str_ireplace(['\\'],['/'],$this->intermediator::class));
         $viewName = str_ireplace(['\\','Intermediator'],['/',Strings::empty],$shortName);
@@ -40,11 +48,31 @@ abstract class IntermediatorKora
         $aUrl = $this->intermediator->getAction()  ?? 
                     self::$app->getParamConfig('config.http.request.aUrl','public');
 
+        $currentTemplate = (!empty($this->bagConfig['views']['defaultTemplate']) ? $this->bagConfig['views']['defaultTemplate'] : throw new DefaultException('No valid templates found!',404));
+
+        if(!empty($template))
+        {
+            if(array_key_exists($template,$this->bagConfig['views']['templates']))
+            {
+                $currentTemplate = $this->bagConfig['views']['templates'][$template];
+            }
+            else if(in_array($template,$this->bagConfig['views']['templates']))
+            {
+                $key = array_search($template,$this->bagConfig['views']['templates']);
+
+                if($key)
+                {
+                    $currentTemplate = $this->bagConfig['views']['templates'][$key];
+                }
+            }
+        }
+
         return [
             'fullName' => $this->intermediator::class,
             'shortName' => $shortName,
             'viewName' =>  $viewName,
             'directoryView' => $directoryView,
+            'template' => $currentTemplate,
             'action' => $aUrl
         ];
     }
@@ -61,12 +89,12 @@ abstract class IntermediatorKora
         }
 
         $this->bagConfig = array_merge($config,$settings);
-        $this->bagConfig['currentPage'] = $this->getCurrentPage();
-
     }
 
-    private function callAction(array $data, ?string $template)
+    private function callAction(array $data, mixed $template)
     {
+        $this->bagConfig['currentPage'] = $this->getCurrentPage($template);
+
         $filterResponseAfter = self::callFilter('after');
        
         $aUrl = $this->bagConfig['currentPage']['action'];
@@ -94,9 +122,8 @@ abstract class IntermediatorKora
                                         [defaultPageExtension,defaultTemplate,templates]!",404);
         }
 
-        $this->bagConfig['views']['currentTemplate'] = !empty($template) && in_array($template,$this->bagConfig['views']['templates']) 
-                                                       ? $template 
-                                                       : (!empty($this->bagConfig['views']['defaultTemplate']) ? $this->bagConfig['views']['defaultTemplate'] : throw new DefaultException('No valid templates found!',404));
+
+
 
         $request = self::$app->getParamConfig('config.request','public');
         $response = new IntermediatorResponseKora($data, $this->bagConfig, $filterResponseAfter, $request);
@@ -116,7 +143,7 @@ abstract class IntermediatorKora
         }
     } 
   
-    public function view(array $data = [], $template = null)
+    public function view(array $data = [], string|int|null  $template = null)
     {
         $this->callAction($data,$template);
     }
