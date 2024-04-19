@@ -33,7 +33,6 @@ class TemplateReplace
 
     public function addAll(array $listReplacement)
     {
-       // dd($listReplacement);
         foreach($listReplacement as $k => $v)
         {
              if(!empty($k) && is_scalar($v))

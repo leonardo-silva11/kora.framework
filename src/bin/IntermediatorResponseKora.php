@@ -46,7 +46,7 @@ class IntermediatorResponseKora implements IMenssengerKora
     {
         $ResponseJson = new Response(json_encode($this->response['data']));
         $ResponseJson->headers->set('Content-Type', 'application/json');
-        return $ResponseJson;
+        return $ResponseJson->send();
     }
 
     public function reponseView
@@ -71,6 +71,8 @@ class IntermediatorResponseKora implements IMenssengerKora
         
         $this->instIntermediator = $this->refIntermediator->newInstance();
 
+        $this->refMethod->invokeArgs($this->instIntermediator,[$this]);
+
         return $this;
        
     }
@@ -85,22 +87,16 @@ class IntermediatorResponseKora implements IMenssengerKora
 
     public function send()
     {
-        $this->get();
-        $this->refMethod->invokeArgs($this->instIntermediator,[$this]);
-    }
-
-    private function get()
-    {
         if(!$this->isRequestAjax())
         {
             $nameMethod = $this->config['currentPage']['action'];
-  
+
             return $this->reponseView
             (
                 $nameMethod
             );
         }
-
+      
         return $this->getJsonReponse();
     }
 
