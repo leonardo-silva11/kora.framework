@@ -3,7 +3,7 @@ namespace kora\bin;
 
 use Symfony\Component\HttpFoundation\Response;
 
-class DefaultResponse 
+class DefaultResponseKora 
 extends Response 
 implements IMenssengerKora
 {
