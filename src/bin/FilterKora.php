@@ -97,7 +97,9 @@ class FilterKora
             
             try 
             {
-                $responseFilter[$method] = $instance->$method(...$params);
+                 $resp = $instance->$method(...$params);
+
+                 $responseFilter[$method] = $resp;
             } 
             catch (\Throwable $th) 
             {

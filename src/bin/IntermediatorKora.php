@@ -4,6 +4,7 @@ namespace kora\bin;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\strings\Strings;
 use ReflectionObject;
+use Symfony\Component\HttpFoundation\Response;
 
 abstract class IntermediatorKora
 {    
@@ -126,26 +127,20 @@ abstract class IntermediatorKora
 
 
         $request = self::$app->getParamConfig('config.request','public');
-        $response = new IntermediatorResponseKora($data, $this->bagConfig, $filterResponseAfter, $request);
 
-
-        if(!$response->isRequestAjax())
-        {
-            $response->reponseView
-            (
-                new ReflectionObject($this->intermediator),
-                $aUrl
-            );
-        }
-        else
-        {
-            return $response->getJsonReponse();
-        }
+        return new IntermediatorResponseKora
+        (
+            $data, 
+            $this->bagConfig, 
+            $filterResponseAfter, 
+            $request,
+            new ReflectionObject($this->intermediator)
+        );
     } 
   
     public function view(array $data = [], string|int|null  $template = null)
     {
-        $this->callAction($data,$template);
+        return $this->callAction($data,$template);
     }
 
     private static function start
@@ -154,19 +149,20 @@ abstract class IntermediatorKora
             DependencyManagerKora $serviceContainer, 
             FilterKora $filterKora,
             ControllerKora $controller
-        ) : BagKora
+        ) : BagKora|IntermediatorResponseKora
     {
         self::$app = $app;
         self::$filterKora = $filterKora;
         self::$serviceContainer = $serviceContainer;
         self::$controller = $controller;
-
+        
         return self::callFilter('before');
     }
 
-    private static function callFilter(string $key) : BagKora
+    private static function callFilter(string $key) : BagKora|IntermediatorResponseKora
     {
         $filters = self::$app->getParamConfig('config.http.filters','public');
+  
         $nameBag = sprintf("filters%s",ucfirst($key));
         $bag = new BagKora($nameBag);
 
@@ -175,19 +171,28 @@ abstract class IntermediatorKora
             foreach($filters[$key] as $filter)
             {
                 $methods = $filter['methods'];
-               
+             
                 for($i = 0; $i < count($methods); ++$i)
                 {
                     $class = $filter['class'];
                     $method = $methods[$i];
                     $services = self::$serviceContainer->resolveSingleFiltersDependencies($key,$class,$method);
+                   
                     $response = self::$filterKora->callSingleFilter(self::$controller,$filter,$methods[$i],$services,$key);
+
+                    $data = $response->getResponse($methods[$i]);
+                  
                     self::$app->addInjectable($response->getName(),$response);
                     $bag->add($response->getName(),$response);
+
+                    if(gettype($data) == 'object' && ($data instanceof IntermediatorResponseKora || $data instanceof Response))
+                    {
+                       return $data;
+                    }
                 }
             }
         }
-
+    
         return $bag;
     }
 }

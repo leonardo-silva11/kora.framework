@@ -25,7 +25,7 @@ class FileManager
         return file_exists("{$this->Storage->getCurrentStorage()}{$this->Storage->getDirectorySeparator()}{$fileName}");
     }
 
-    private function getNewPathFile(string $name)
+    private function getNewPathFile(string $name): string
     {
         return "{$this->Storage->getCurrentStorage()}{$this->Storage->getDirectorySeparator()}{$name}";
     }
@@ -36,7 +36,10 @@ class FileManager
 
         if($this->exists($name))
         {
-            $file = file_get_contents($this->getNewPathFile($name));
+            $pathFile = $this->getNewPathFile($name);
+           
+            $file = file_get_contents($pathFile);
+
         }
 
         return $file;

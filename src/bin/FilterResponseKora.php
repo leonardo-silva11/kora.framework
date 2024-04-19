@@ -30,7 +30,7 @@ class FilterResponseKora
         return $this;
     }
 
-    public function getReponse($key = null)
+    public function getResponse($key = null)
     {
         return array_key_exists($key,$this->response[$this->typeFilter]) ? $this->response[$this->typeFilter][$key] : $this->response[$this->typeFilter];
     }

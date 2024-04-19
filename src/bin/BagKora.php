@@ -20,6 +20,16 @@ class BagKora
         }
     }
 
+    public function getResponse(string $key)
+    {
+        return array_key_exists($key,$this->bag) ? $this->bag[$key] : null;
+    }
+
+    public function all()
+    {
+        return $this->bag;
+    }
+
     public function getName()
     {
         return $this->name;

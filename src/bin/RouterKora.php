@@ -243,23 +243,29 @@ class RouterKora
         $refMethod->setAccessible(true); // Permitir acesso ao método privado
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
-     
+       
+
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
-        $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
+        $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
         $m1->setAccessible(false);
 
-        //resolver os parãmetros da rota principal após chamar rotas prévias
-        $parameters = $serviceContainer->filterRouteParameters($controller);
-      //  $parameters[$filterResponseBefore->getName()] = $filterResponseBefore;
-        //dd($parameters);
-        $responseController = $controller->$ctrNameAction(...$parameters);
-
-        if($responseController instanceof Response)
+        if($response instanceof BagKora)
         {
-            $responseController->send();
+            $this->app->addInjectable($response->getName(),$response);
+
+            $parameters = $serviceContainer->filterRouteParameters($controller);
+
+            $response = $controller->$ctrNameAction(...$parameters);
         }
+
+        if(!($response instanceof IMenssengerKora))
+        {
+            throw new DefaultException(sprintf('Response must be an instance of %s!',IMenssengerKora::class),500);
+        }
+
+        $response->send();
     }
 
     private function getAppSettings(string $pathSettings)

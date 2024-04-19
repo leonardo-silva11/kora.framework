@@ -27,7 +27,8 @@ class DependencyManagerKora
             "int" => 0,
             "float" => 0,
             'bool' => true,
-            'array' => []
+            'array' => [],
+            'mixed' => null
         ];
     }
 
@@ -52,13 +53,16 @@ class DependencyManagerKora
 
             if(array_key_exists($parameter->getName(),$injectables))
             {
+               
                 $dependencies[] = $injectables[$parameter->getName()];
             }
             else
-            {         
+            {       
+
+                $key = $parameterType != null && method_exists($parameterType,'getName') ? $parameterType->getName() : 'mixed';
                 $dependencies[] = $parameter->isDefaultValueAvailable() ? $parameter->getDefaultValue() 
-                : (array_key_exists($parameterType->getName(),$this->defaultValues) 
-                ? $this->defaultValues[$parameterType->getName()] 
+                : (array_key_exists($key,$this->defaultValues) 
+                ? $this->defaultValues[$key] 
                 : throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()}!"));    
                 
             }   
@@ -114,7 +118,7 @@ class DependencyManagerKora
     
         $parameters = $constructor->getParameters();
         $dependencies = [];
- 
+
         foreach ($parameters as $parameter) 
         {
             $parameterType = $parameter->getType();
@@ -165,12 +169,33 @@ class DependencyManagerKora
 
                 foreach($injectables as $instanceInjectable)
                 {
+                    $typeItem = gettype($instanceInjectable);
+
+                    if($typeItem == 'object')
+                    {
+                        $typeClass = get_class($instanceInjectable);
+
+                        if($typeClass === $info['namespace'])
+                        {
+                            $resolved[$objects[$i]] = $instanceInjectable;
+                        }
+                    }
+                 /*   else
+                    {
+                        dd($typeItem,$objects[$i]);
+                    }
+               
+                    if(is_object($instanceInjectable))
+                    {
+
+                    }
+                  //  dump($instanceInjectable,$objects[$i]);
                     $typeClass = get_class($instanceInjectable);
 
                     if($typeClass === $info['namespace'])
                     {
                         $resolved[$objects[$i]] = $instanceInjectable;
-                    }
+                    }*/
                 }
             }
    

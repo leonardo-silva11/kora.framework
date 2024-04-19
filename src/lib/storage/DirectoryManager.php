@@ -66,6 +66,14 @@ class DirectoryManager
         $this->currentStorage = $path;
     }
 
+    public function isCurrentStorage(string $directory)
+    {
+        $segments = explode($this->getDirectorySeparator(),$this->getCurrentStorage());
+        $last = end($segments);
+
+        return !empty($directory) && $last === $directory;
+    }
+
     public function forward(string $directory): bool
     {
         $cd = false;
@@ -123,8 +131,8 @@ class DirectoryManager
         return  !empty($this->currentStorage) ? $this->currentStorage : "{$this->currentDrive}{$this->getDirectorySeparator()}{$this->storage}";
     }
 
-    public function __clone()
+    public function cloneStorage()
     {
-        return clone $this;
+        return new DirectoryManager($this->storage,$this->defaultDrives);
     }
 }
