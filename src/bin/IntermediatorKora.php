@@ -15,15 +15,13 @@ abstract class IntermediatorKora
     private IntermediatorKora $intermediator;
     private array $bagConfig = [];
     protected ?string $action;
+    protected int $code = 200;
 
-    public function getAction()
+    protected function __construct(IntermediatorKora $intermediator, ?string $action, int $code = 200)
     {
-        return $this->action;
-    }
-
-    protected function __construct(IntermediatorKora $intermediator, ?string $action)
-    {
+        $this->intermediator = $intermediator; 
         $this->action = $action;
+        $this->setCode($code);
 
         if (!($intermediator instanceof IntermediatorKora)) 
         {
@@ -34,11 +32,25 @@ abstract class IntermediatorKora
             throw new DefaultException(sprintf("Invalid name {%s}. The intermediate class must contain the suffix or prefix {Intermediator} in its name!",IntermediatorKora::class),500);
         }
 
-        $this->intermediator = $intermediator; 
-        
         $this->config();
 
         return $this->intermediator;
+    }
+
+    public function setCode($code)
+    {
+        $this->code = is_int($code) && $code >= 100 && $code <= 599 ? $code : throw new DefaultException("The code http {$code} is inválid!");
+        return $this->intermediator;
+    }
+
+    public function getCode()
+    {
+        return $this->code;
+    }
+
+    public function getAction()
+    {
+        return $this->action;
     }
 
     private function getCurrentPage(mixed $template)
@@ -134,7 +146,7 @@ abstract class IntermediatorKora
             $this->bagConfig, 
             $filterResponseAfter, 
             $request,
-            new ReflectionObject($this->intermediator)
+            $this->intermediator
         );
     } 
   

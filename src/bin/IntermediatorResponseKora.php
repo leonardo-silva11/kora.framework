@@ -22,17 +22,42 @@ class IntermediatorResponseKora implements IMenssengerKora
         array $config, 
         BagKora $filterResponseKoraAfter, 
         Request $Request,
-        ReflectionObject $refIntermediator
+        IntermediatorKora $Intermediator
     )
     {
         $this->config = $config;
         $this->Request = $Request;
-        $this->refIntermediator = $refIntermediator;
+        $this->instIntermediator = $Intermediator;
+        $this->refIntermediator = new ReflectionObject($Intermediator);
         
+        $this->makeReponse($data,$config,$filterResponseKoraAfter);
+
+
+    }
+
+    private function makeReponse
+        (
+            $data,
+            $filterResponseKoraAfter
+        )
+    {
+        $santize = 
+        [
+            'clientCredentials'
+        ];
+
+        foreach($santize as $item)
+        {
+            if(array_key_exists($item,$this->config))
+            {
+                unset($this->config[$item]);
+            }
+        }
+
 
         $this->response =  [
             'data' => $data,
-            'config' => $config,
+            'config' => $this->config,
             'filter' => $filterResponseKoraAfter
         ];
     }
@@ -44,7 +69,7 @@ class IntermediatorResponseKora implements IMenssengerKora
 
     public function getJsonReponse()
     {
-        $ResponseJson = new Response(json_encode($this->response['data']));
+        $ResponseJson = new Response(json_encode($this->response['data']),$this->instIntermediator->getCode());
         $ResponseJson->headers->set('Content-Type', 'application/json');
         return $ResponseJson->send();
     }
@@ -69,8 +94,6 @@ class IntermediatorResponseKora implements IMenssengerKora
                     ),404);
         }
         
-        $this->instIntermediator = $this->refIntermediator->newInstance();
-
         $this->refMethod->invokeArgs($this->instIntermediator,[$this]);
 
         return $this;
@@ -83,6 +106,11 @@ class IntermediatorResponseKora implements IMenssengerKora
         array_key_exists($key,$this->response) ? 
         $this->response[$key] 
         : throw new DefaultException("{$key} is not a valid key for reponse intermediator!",400);
+    }
+
+    public function getAll()
+    {
+        return $this->response;
     }
 
     public function send()

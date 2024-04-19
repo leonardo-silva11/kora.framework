@@ -87,6 +87,24 @@ class DirectoryManager
         return $cd;
     }
 
+    public function createOrForward($directory) : mixed
+    {
+        if
+            (
+                !$this->isCurrentStorage($directory) 
+                && 
+                !$this->directoryExists($directory))
+        {
+            return $this->saveDirectory("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directory}");
+        }
+        else if($this->directoryExists($directory))
+        {
+            return $this->forward($directory);
+        }
+
+        return false;
+    }
+
     private function loadStorage()
     {
         $path = $this->getCurrentStorage();
