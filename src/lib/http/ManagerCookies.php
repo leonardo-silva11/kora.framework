@@ -31,7 +31,18 @@ class ManagerCookies
         return $this->Request->cookies->get($key);
     }
 
-    public function create(string $key,mixed $value, array $options)
+    public function delete(string $key)
+    {
+        if(!$this->exists($key))
+        {
+            $response = new Response();
+            $cookie = Cookie::create($key, null, 1, '/', null, false, true);
+            $response->headers->setCookie($cookie);
+            $response->send();
+        }
+    }
+
+    public function create(string $key, mixed $value, array $options)
     {
         if(!$this->exists($key))
         {

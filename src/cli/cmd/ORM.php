@@ -6,6 +6,7 @@ use DirectoryIterator;
 use kora\lib\exceptions\DefaultException;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use kora\lib\storage\DirectoryManager;
+use kora\lib\strings\Strings;
 use kora\lib\support\Log;
 
 //require dirname(__DIR__,3).DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php';
@@ -364,8 +365,10 @@ class ORM
                 $msg = "table {$objMigration->getTableName()} created successfully in database!";
             }
 
-            $this->log->save($msg,true);
+            $this->log->save($msg,false);
         }
+
+        $this->log->showAllBag();
     }
 
 

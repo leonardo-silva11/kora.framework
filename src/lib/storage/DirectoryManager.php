@@ -11,16 +11,18 @@ class DirectoryManager
     private string $currentDrive;
     private string $storage = "phpDefaultStorageKora";
     private $currentStorage;
+    private bool $readOnly = false;
     private $defaultDrives = 
     [
         "C:\\",
         "/var"
     ];
 
-    public function __construct(string $storage = null, array $defaultDrives =[]) 
+    public function __construct(string $storage = null, array $defaultDrives =[], bool $readOnly = false) 
     {
         $this->defaultDrives = !empty($defaultDrives) ? $defaultDrives : $this->defaultDrives;
         $this->storage = $storage ?? $this->storage;
+        $this->readOnly = $readOnly;
         $this->defaultDrive(); 
         $this->loadStorage();      
     }
@@ -78,7 +80,7 @@ class DirectoryManager
     {
         $cd = false;
 
-        if($this->directoryExists($directory))
+        if($this->directoryExists($directory) && !$this->readOnly)
         {
             $this->currentStorage .= "{$this->getDirectorySeparator()}{$directory}";
             $cd = true;
@@ -91,6 +93,8 @@ class DirectoryManager
     {
         if
             (
+                !$this->readOnly
+                &&
                 !$this->isCurrentStorage($directory) 
                 && 
                 !$this->directoryExists($directory))

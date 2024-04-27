@@ -3,17 +3,32 @@ namespace kora\lib\support;
 
 use DateTime;
 use Throwable;
-use kora\lib\exceptions\DefaultException;
 use kora\lib\storage\DirectoryManager;
-
+use kora\lib\strings\Strings;
 
 class Log
 {
     private DirectoryManager $directoryManager;
+    private array $bagMessages = [];
+    private bool $useBag = true;
 
     public function __construct(DirectoryManager $directoryManager)
     {
         $this->directoryManager = $directoryManager;
+
+        return $this;
+    }
+
+    public function useBag(bool $useBag)
+    {
+        $this->useBag = $useBag;
+    }
+
+    public function clearBag()
+    {
+        $this->bagMessages = [];
+
+        return $this;
     }
 
     public function save(string $message, $showMessage = false) 
@@ -34,6 +49,11 @@ class Log
 
             fclose($file);
 
+            if($this->useBag)
+            {
+                array_push($this->bagMessages,$msg);
+            }
+
             if($showMessage)
             {
                 exit(printf($msg));
@@ -43,5 +63,19 @@ class Log
         {
             throw $th;
         }
+    }
+
+    public function showAllBag($exit = true)
+    {
+        $msgs = Strings::empty;
+
+        foreach($this->bagMessages as $msg)
+        {
+            $msgs .= $msg;
+        }
+      
+        printf($msg);
+
+        if($exit){ exit; }
     }
 }
