@@ -11,15 +11,10 @@ use kora\lib\support\Log;
 
 //require dirname(__DIR__,3).DIRECTORY_SEPARATOR.'vendor'.DIRECTORY_SEPARATOR.'autoload.php';
 
-class ORM
+class ORM extends CommandCli
 {
-    private $dbConfig = [];
-    private $settings = [];
-    private $directorySeparator = DIRECTORY_SEPARATOR;
-    private array $paths;
-    private $app;
-    private Log $log;
-    private $cmdArgs = [];
+
+ 
     private $parametersCli = [
         '-t' => 'table',
         '-c' => 'create',
@@ -30,12 +25,10 @@ class ORM
 
     public function __construct(string $path)
     {
-        $this->paths['app'] = $path; 
-
-        $this->log = new Log(new DirectoryManager('php-sound-cli'));
+        parent::__construct($this,$path);
     }
 
-    public function config(array $args)
+  /*  public function config(array $args)
     {     
         try 
         {
@@ -90,9 +83,7 @@ class ORM
         {
            $this->log->save($th->getMessage(),true);
         }   
-      
-
-    }
+    }*/
 
     private function createDirectories()
     {
@@ -144,14 +135,7 @@ class ORM
 
     }
 
-    private function getDatabaseConfig(int $appKey, int $appConn)
-    {
-        $apps = array_values($this->settings['apps']);
-        $this->app = $apps[$appKey- 1];
-        $connectionStrings = array_values($this->app['connectionStrings']);
-        $configDatabase = $connectionStrings[$appConn - 1];
-        return $configDatabase;
-    }
+
 
     private function connect(): void
     {

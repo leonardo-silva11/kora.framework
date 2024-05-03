@@ -2,77 +2,46 @@
 <?php
 namespace kora\cli\cmd;
 
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\ConsoleOutput;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Filesystem\Filesystem;
 
 
-class MakeControllerCommand
+class MakeControllerCommand extends CommandCli
 {
-    public function __construct(){}
+    public function __construct(string $path)
+    {
+        parent::__construct($this,$path);
+    }
 
     public function exec()
     {
-        $app = new Application();
-
-        $app->register('make:controller')
-        ->addArgument('name', InputArgument::REQUIRED)
-        ->addOption('app', null, InputOption::VALUE_REQUIRED)
-        ->addOption('action',null, InputOption::VALUE_OPTIONAL)
-        ->setCode(function ($input, $output) {
-            $controller = $input->getArgument('name'); // Use $controller em vez de $name
-            $app = $input->getOption('app');
-            $action = $input->getOption('action');
-
-            if ($app === null) 
-            {
-                $output->writeln('<error>the --app option is missing.</error>');
-                return 1;
-            }
-    
-            $output->writeln("Gerando controller: {$controller}...");
-    
-            $this->createController($app, $controller, $action);
-        });
-
-        $app->run();
-    
+        $basePath = dirname(__DIR__, 1);
+        $baseFile = file_get_contents("$basePath/skeleton/ControllerSkeleton.kora");
+        $this->createController($baseFile);
     }
 
-    public function createController($app, $controller, $action)
+    public function createController($baseFile)
     {
-        $basePath = dirname(__DIR__, 1);
-
-        $base = file_get_contents("$basePath/skeleton/ControllerSkeleton.kora");
-
-        dump($base,$app, $controller, $action);
-
-        exit;
-
+        $nameController = ucfirst($this->cmdArgs[0]);
+    
+        $forceOverwrite =  OptionsCli::getOption('-f',$this->cmdArgs) != null;
+        $method = OptionsCli::getOption('--m',$this->cmdArgs);
+        $method = empty($method) ? 'index' : $this->getAndValidate($method,'method');
+        $params = '';
   
+        $baseFile = str_ireplace([
+            '{{appName}}',
+            '{{nameController}}',
+            '{{nameMethod}}',
+            '{{params}}'
+        ],[
+           $this->app['lowerName'],
+           $nameController,
+           $method,
+           $params
+        ],[$baseFile]);
 
-        $appPath = "$basePath/app";
-        $publicPath = "$basePath/public";
+        $this->save($this->paths['defaultDirectoryControllerPath'],"{$nameController}Controller",$baseFile,$forceOverwrite);
 
-        $paths = [
-                    "$appPath/$appName/controllers",
-                    "$appPath/$appName/models",
-                    "$appPath/$appName/intermediates",
-                    "$publicPath/$appName/views"
-                 ];
-
-        $fs = new Filesystem();
-
-        for($i = 0; $i < count($paths); ++$i)
-        {
-            if(!$fs->exists($paths[$i]))
-            {
-                $output->writeln("creating directory: $paths[$i]");
-                $fs->mkdir($paths[$i], 0774, true);
-            }
-        }
+        $this->log->save("Controller {$nameController} created sucessfully for app {$this->app['lowerName']}!",true);
     }
 }

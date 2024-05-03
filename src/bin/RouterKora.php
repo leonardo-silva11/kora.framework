@@ -6,58 +6,45 @@ use kora\lib\collections\Collections;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\storage\DirectoryManager;
 use kora\lib\strings\Strings;
-use JmesPath\Env;
 use ReflectionClass;
 use ReflectionMethod;
 
 class RouterKora
 {
-    private static $request;
     private static $instance = null;
-    private string $projectPath;
-    private string $appPath;
     private AppKora $app;
-    private RequestKora $RequestKora;
-    private FilterKora $FilterKora;
 
-
-    private function __construct(\Main $main)
+    private function __construct(array $config, DirectoryManager $defaultStorage)
     {
-        RouterKora::$request = Request::createFromGlobals();
-
-        $this->projectPath = dirname(__DIR__,5);
-        $this->appPath = "$this->projectPath/app";
-
-        $this->config($main);     
+        $this->config($config,$defaultStorage);    
     }
 
-    private function config(\Main $main)
+    private function config
+        (
+            array $config, 
+            DirectoryManager $defaultStorage
+        )
     {
+        $config['http']['request']['instance'] = Request::createFromGlobals();
 
-        $defaultStorage = $main->getDefaultStorage();    
-        $pathSettings = "{$defaultStorage->getCurrentStorage()}{$defaultStorage->getDirectorySeparator()}appsettings.json";
-
-        if(!file_exists($pathSettings))
+        $config['pathSettings'] = !$config['useSettingsInProject'] 
+                        ? 
+                        "{$defaultStorage->getCurrentStorage()}{$defaultStorage->getDirectorySeparator()}appsettings.json"
+                        :
+                        "{$config['pathOfProject']}{$defaultStorage->getDirectorySeparator()}appsettings.json";
+        
+        if(!file_exists($config['pathSettings']))
         {
-            throw new DefaultException("{{$pathSettings}} not found!");
+            throw new DefaultException("{{$config['pathSettings']}} not found!");
         }
 
-        $appSettings = $this->getAppSettings($pathSettings);
-        $project = $main->getProject();
 
-        $rqstUri = RouterKora::$request->getRequestUri();
+        $config['storage']['defaultStorage'] = $defaultStorage;
+        $config['appSettings'] = $this->getAppSettings($config['pathSettings']);
+        $config['http']['requestUri'] = $config['http']['request']['instance']->getRequestUri();
+        $config['http']['requestUriCollection'] = $this->uriToCollection($config['http']['requestUri']);
 
-        $parseUri = $this->uriToCollection($rqstUri);
-        
-        $defaultApp = $rqstUri === '/' || !$this->isApp($parseUri[0],$appSettings);
-        
-        $this->parseApp
-        (
-            $parseUri,
-            $defaultApp,
-            $appSettings,
-            $defaultStorage
-        );
+        $this->parseApp($config);
     }
 
     private function uriToCollection(string $rqstUri) : array
@@ -72,11 +59,6 @@ class RouterKora
         $r = array_values($r);
         
         return $r;
-    }
-
-    private function isApp(string $appName, Array $appSettings) : bool
-    {
-        return array_key_exists($appName,$appSettings['apps']);
     }
 
     private function parseRouteUrl(array $parseUri, int $param)
@@ -108,152 +90,108 @@ class RouterKora
         }
     }
 
-
-    private function parseRequest(array $parseUri)
-    {    
-        $defaultRoute = $this->app->getParamConfig('config.defaultRoute','public');
-
-        if(count($defaultRoute['segmentPath']) != 2)
+    private function defineDefaultApp(array &$config): void
+    {
+        if(!is_array($config['appSettings']['apps']) || empty($config['appSettings']['apps']))
         {
-            throw new DefaultException("Default route: {$defaultRoute['defaultRoutePath']} is malformed in appsettings.json, the correct format is: `controller/action`");
+            throw new DefaultException('The sections {apps} in file {appsettings.json} does not contains apps!',500);
         }
- 
-     
-        //deve ter uma match com a controller do app
-        $cUrl =  $this->parseRouteUrl($parseUri,0);
-        //deve ter uma match com a action do app na controller
-        $aUrl = $this->parseRouteUrl($parseUri,1);
 
-        $matchRoute = [
-            'default' => $defaultRoute,
-            'current' => [
-                'cUrl' => $cUrl,
-                'aUrl' => $aUrl,
-                'parseCurl' => $parseUri[0] ?? null,  
-                'parseAurl' => $parseUri[1] ?? null 
-            ]
-        ];
-
-        $this->defaultRouteParse($matchRoute);
-        $this->app->parseRouteConfig($matchRoute);
+        $firstApp = key($config['appSettings']['apps']);
+        $config['appSettings']['defaultApp'] = mb_strtolower($firstApp);
     }
 
-    private function setUpCall(array $parseUri)
+    private function newInstanceApp(array &$config): void
     {
-        $this->parseRequest($parseUri); 
-     
-        $this->RequestKora = new RequestKora($this->app,RouterKora::$request);
-        $this->RequestKora->paramsRequest();
-       
-        $this->RequestKora->configRequest(); 
+        $requestUri = $config['http']['requestUri'];
+        $requestUriCollection = $config['http']['requestUriCollection'];
 
+        $app = mb_strtolower($requestUriCollection[0]);
 
-        $this->FilterKora = new FilterKora($this->app);
-        $this->FilterKora->parseFilters();
+        $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
+        $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
+        $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
 
-        $this->callController();
-    }
-
-    private function parseApp
-    (
-        array $parseUri, 
-        bool $isDefault, 
-        array $appSettings, 
-        DirectoryManager $defaultStorage
-    )
-    {
-        $env = new Env();
-
-        $defaultAppName = $env->search('defaultApp',$appSettings);
-     
-        if(empty($defaultAppName))
+        if(empty($appConfig))
         {
-            throw new DefaultException("Default app is not defined in appsettings.json");
+            throw new DefaultException("app config in {appsettings.json} it's misconfigured or does not exist!",500);
         }
 
-        $appName = $isDefault ? mb_strtolower($defaultAppName): mb_strtolower($parseUri[0]);
+        $config['app']['class'] = $appConfig['key'];
+        $config['app']['config'] = $appConfig;
 
-        if(!Collections::arrayKeyExistsInsensitive($appName,$appSettings['apps']))
+        $Class = "app\\{$config['app']['name']}\\{$config['app']['class']}";
+
+        $path =  $config['pathOfProject'].DIRECTORY_SEPARATOR.
+                "app".DIRECTORY_SEPARATOR.
+                $config['app']['name'].DIRECTORY_SEPARATOR.
+                $config['app']['class'].".php";
+
+        if(!file_exists($path) || !class_exists($Class))
         {
-            throw new DefaultException("App {$appName} is not defined in appsettings.json in section {apps}");
+            throw new DefaultException("The app {$config['app']['name']} class not found in: {$path}",500);
         }
-
-        $appConfig = Collections::getElementArrayKeyInsensitive($appName,$appSettings['apps']);
-
-        $defaultRoute = $env->search("apps.{$appConfig['key']}",$appSettings);
-
-        if(empty($defaultRoute))
-        {
-            throw new DefaultException("Default route app is not defined in appsettings.json for app $appName");
-        }
-
-        $className = $appConfig['key'];
-        $namespace = "app\\$appName\\$className";
-        $classPath = "$this->appPath/$appName/$className.php";
-        
-        if(!file_exists($classPath) || !class_exists($namespace))
-        {
-            throw new DefaultException("The app {$appName} class not found in: $this->appPath/$appName",500);
-        }
-
-        $config =  
-        [
-            'appName' => $appName,
-            'className' => $className,
-            'namespace' => $namespace,
-            'appPath' => "$this->appPath/$appName",
-            'classPath' => $classPath,
-            'defaultRoute' => [
-                'defaultRoutePath' => $defaultRoute['defaultRoute'],
-                'isDefaultApp' => $isDefault,
-                'segmentPath' => explode('/',$defaultRoute['defaultRoute']),
-            ],
-            'settings' => $appConfig,
-            'request' => self::$request,
-            'defaultStorage' => $defaultStorage
-        ];
-
-        $this->app = new $namespace(RouterKora::$request);
-
-        $this->app->setParamConfig('config',$config);
-        $this->app->setParamConfig('appSettings',$appSettings);
- 
-        $this->setUpCall($parseUri);
     
+        $config['app']['path'] = dirname($path);
+        $config['app']['pathClass'] = $path;
+        $config['app']['fullName'] = $Class;
+        $this->app = new $Class($config);
     }
 
-    private function callController()
+    private function parseApp(array &$config): void
     {
-        //Chama as configurações adicionadas nesse método
+
+        $appSettings = $config['appSettings'];
+
+        if(!Collections::arrayKeyExistsInsensitive('apps',$appSettings))
+        {
+            throw new DefaultException('The file {appsettings.json} does not contains definitions for {apps}!',500);
+        }
+
+        if(empty($appSettings['defaultApp']))
+        {
+            $this->defineDefaultApp($config);
+        }
+
+        $this->newInstanceApp($config);
+       
+        (new RequestKora($config));
+        $this->callController(
+            $config,
+            (new FilterKora($config))
+        ); 
+    }
+
+    private function callController(array $config,FilterKora $FilterKora)
+    {
         $this->app->extraConfig();
-        $serviceContainer  = new DependencyManagerKora($this->app);
+
+        $serviceContainer  = new DependencyManagerKora($config);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
+        $this->app->block();
 
-        $ctrNameClass = $this->app->getParamConfig('config.http.request.namespace','public');
-        $ctrNameAction = $this->app->getParamConfig('config.http.request.aUrl','public');
-        
-        $controller = new $ctrNameClass(...$constructorDependencies);
+        $controllerClass = $this->app->getParamConfig('http.controller.namespace');
+        $controller = new $controllerClass(...$constructorDependencies);
 
-        //inject app in ControllerKora class
         $refMethod = new ReflectionMethod(ControllerKora::class, 'start');
         $refMethod->setAccessible(true); // Permitir acesso ao método privado
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
-       
+
 
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
-        $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$this->FilterKora,$controller]);
+        $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$FilterKora,$controller]);
         $m1->setAccessible(false);
-
+        
         if($response instanceof BagKora)
         {
             $this->app->addInjectable($response->getName(),$response);
-
+          
             $parameters = $serviceContainer->filterRouteParameters($controller);
-
-            $response = $controller->$ctrNameAction(...$parameters);
+            $action = $this->app->getParamConfig('http.action.name');
+            $response = $controller->$action(...$parameters);
         }
 
         if(!($response instanceof IMenssengerKora))
@@ -280,12 +218,11 @@ class RouterKora
         return $settings;
     }
 
-    public static function start(\Main $main)
+    public static function start(array $config, $defaultStorage)
     {
-
         if(empty(RouterKora::$instance))
         {
-            RouterKora::$instance = new RouterKora($main);
+            RouterKora::$instance = new RouterKora($config, $defaultStorage);
         }
     }
 }

@@ -1,6 +1,7 @@
 <?php 
 namespace kora\bin;
 
+use kora\lib\collections\Collections;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\strings\Strings;
 use ReflectionClass;
@@ -13,23 +14,21 @@ class DependencyManagerKora
 {
     private Appkora $app;
     private Array $services;
-    private Array $defaultValues = [];
+    private Array $defaultValues =  
+    [
+        "string" => Strings::empty,
+        "int" => 0,
+        "float" => 0,
+        'bool' => true,
+        'array' => [],
+        'mixed' => null
+    ];
 
-    public function __construct(AppKora $app)
+    public function __construct(array $config)
     {
-        $this->app = $app;
-        $cUrl = $this->app->getParamConfig("config.http.request.cUrl",'public');
-        $this->services = $this->app->getParamConfig("routes.{$cUrl}.services","protected",false) ?? [];
-
-        $this->defaultValues = 
-        [
-            "string" => Strings::empty,
-            "int" => 0,
-            "float" => 0,
-            'bool' => true,
-            'array' => [],
-            'mixed' => null
-        ];
+        $this->app = $config['app']['instance'];
+        $this->services = $this->app->getParamConfig("http.route.services",'protected',false) ?? [];
+        $this->app->setParamConfig('http.services',$this->services,'protected');
     }
 
     private function extract($service,$key)
@@ -180,22 +179,6 @@ class DependencyManagerKora
                             $resolved[$objects[$i]] = $instanceInjectable;
                         }
                     }
-                 /*   else
-                    {
-                        dd($typeItem,$objects[$i]);
-                    }
-               
-                    if(is_object($instanceInjectable))
-                    {
-
-                    }
-                  //  dump($instanceInjectable,$objects[$i]);
-                    $typeClass = get_class($instanceInjectable);
-
-                    if($typeClass === $info['namespace'])
-                    {
-                        $resolved[$objects[$i]] = $instanceInjectable;
-                    }*/
                 }
             }
    
@@ -271,7 +254,7 @@ class DependencyManagerKora
     {
         $resolved = [];
 
-        $aUrl = $this->app->getParamConfig('config.http.request.aUrl','public');
+        $aUrl = $this->app->getParamConfig('http.action.name','protected');
 
         if(array_key_exists($aUrl,$this->services))
         {
@@ -285,11 +268,15 @@ class DependencyManagerKora
 
     private function resolveInstance(string $type, string $filterClass, string $method, array &$resolved)
     {
-        $filters = $this->app->getParamConfig("config.http.filters.{$type}",'public',false);
+        $filters = $this->app->getParamConfig("http.filters.{$type}",'protected',false);
 
-        $filter = array_map(function($item) use($filterClass){
+
+
+        $filter = array_map(function($item) use ($filterClass) 
+        {
+
             return $item['class'] == $filterClass ? $item['methods'] : [];
-        },$filters);
+        }, $filters);
 
         if
             (
@@ -303,7 +290,8 @@ class DependencyManagerKora
             )
         {
 
-            if(array_key_exists($method,$this->services))
+    
+            if(Collections::arrayKeyExistsInsensitive($method,$this->services))
             {
                 $resolved[$type][$method] = [];
 
@@ -387,8 +375,8 @@ class DependencyManagerKora
         array $routeDependencies = null
     )
     {
-        $action = $action ?? $this->app->getParamConfig('config.http.request.aUrl','public');
-        $httpParameters = $httpParameters ?? $this->app->getParamConfig('config.http.parameters','public');
+        $action = $action ?? $this->app->getParamConfig('http.action.name','protected');
+        $httpParameters = $httpParameters ?? $this->app->getParamConfig('http.route.params.parameters','protected');
         $routeDependencies = $routeDependencies ?? $this->resolveRouteDependencies();
 
         $reflection = new ReflectionMethod($controller, $action);

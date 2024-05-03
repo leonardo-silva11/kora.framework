@@ -13,69 +13,71 @@ class FilterKora
 {
     private AppKora $app;
     
-    public function __construct(AppKora $app)
+    public function __construct(array $config)
     {
-        $this->app = $app;
+        $this->app = $config['app']['instance'];
+        $this->parseFilters($config);
+
+        return $this;
     }
 
-    public function parseFilters()
+    private function parseFilters(array $config)
     {
-        $filters = $this->app->getParamConfig('route.filters','protected',false);
-        $config = $this->app->getParamConfig('config','public');
+        $filters = $this->app->getParamConfig('http.action.filters');
+        $nameOfApp = $this->app->getParamConfig('app.name');
+        $appPath = $this->app->getParamConfig('app.path');
+
         $filterCollection = 
         [
             'before' => [],
             'after' => []
         ];
-
-       
-        if(!empty($filters))
+     
+        foreach($filters as $k => $f)
         {
-            foreach($filters as $k => $f)
+            if(($k === 'after' || $k === 'before') && !empty($f))
             {
-                if(($k === 'after' || $k === 'before') && !empty($f))
+                foreach($f as $k2 => $f2)
                 {
-                    foreach($f as $k2 => $f2)
+                    $className = $k2;
+                    $namespace = "app\\$nameOfApp\\filters\\$className";
+
+                    $path = $appPath.DIRECTORY_SEPARATOR.'filters'.DIRECTORY_SEPARATOR.$className.'.php';
+
+                    if(!file_exists($path) || !trait_exists($namespace))
                     {
-                        $appName = $config['appName'];
-                        $className = $k2;
-                        $namespace = "app\\$appName\\filters\\$className";
-                        $appPath = $config['appPath'];
-
-                        $path = "$appPath/filters/$className.php";
-
-                        
-                        if(!file_exists($path) || !trait_exists($namespace))
-                        {
-                            throw new DefaultException("filter {$className} does not exists!",404);
-                        }
-
-                        foreach($f2['methods'] as $mtd)
-                        {
-                            if(!method_exists($namespace,$mtd))
-                            {
-                                throw new DefaultException("filter {$className}/{$mtd} not found!",404);
-                            }
-                        }
-
-                        array_push($filterCollection[$k],
-                        [
-                            'order' => $k,
-                            'class' => $className,
-                            'methods' => $f2['methods'],
-                            'namespace' => $namespace,
-                            'path' => $path
-                        ]);
+                        throw new DefaultException("filter {$className} does not exists!",404);
                     }
+
+                    foreach($f2['methods'] as $mtd)
+                    {
+                        if(!method_exists($namespace,$mtd))
+                        {
+                            throw new DefaultException("filter {$className}/{$mtd} not found!",404);
+                        }
+                    }
+
+                    array_push($filterCollection[$k],
+                    [
+                        'order' => $k,
+                        'class' => $className,
+                        'methods' => $f2['methods'],
+                        'namespace' => $namespace,
+                        'path' => $path
+                    ]);
                 }
             }
         }
+        
 
-        $this->app->setParamConfig('config.http.filters',$filterCollection);
+        $this->app->setParamConfig('http.filters',$filterCollection,'protected');
+
+        return $this;
     }
 
     public function callSingleFilter(ControllerKora $instance, Array $filter, string $method, Array $services, String $type)
     {
+       
         if(!in_array($type,['before','after']))
         {
             throw new DefaultException("allowed type filters are: (before) and (after)!",400);
@@ -89,14 +91,18 @@ class FilterKora
         if(in_array($method,$filter['methods']))
         {
             $params = [];
-
-            if(array_key_exists($method,$services[$type]))
+          
+            if(Collections::arrayKeyExistsInsensitive($type,$services)
+                &&
+            Collections::arrayKeyExistsInsensitive($method,$services[$type])
+            )
             {
                 $params = $services[$type][$method];
             }
-            
+
             try 
             {
+
                  $resp = $instance->$method(...$params);
 
                  $responseFilter[$method] = $resp;

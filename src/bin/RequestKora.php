@@ -1,6 +1,7 @@
 <?php
 namespace kora\bin;
 
+use kora\lib\collections\Collections;
 use Symfony\Component\HttpFoundation\Request;
 use kora\lib\exceptions\DefaultException;
 
@@ -8,11 +9,23 @@ class RequestKora
 {
     private AppKora $app;
     private Request $Request;
+    private array $config;
     
-    public function __construct(AppKora $app, Request $Request)
+    public function __construct(array &$config)
     {
-        $this->app = $app;
-        $this->Request = $Request;
+        $this->config = &$config;
+
+        $this->app = $config['app']['instance'];
+
+        $this->Request = $config['http']['request']['instance'];
+
+        $this->parseCurrentRoute()
+             ->_configController()
+             ->_configAction()
+             ->_configUrl()
+             ->_paramsRequest();
+
+        return $this;
     }
 
     private function paramsRequestValidateAll($httpMethod,$params,$p)
@@ -29,7 +42,38 @@ class RequestKora
             }
     }
 
+    private function parseCurrentRoute()
+    {    
+ 
+        $nameOfApp =  $this->app->getParamConfig('app.class','protected');
+        $routes = $this->app->getParamConfig('app.routes.routes','protected');
+        $routeDefault = $this->app->getParamConfig("appSettings.apps.{$nameOfApp}.defaultRoute",'protected');
 
+        if(!Collections::arrayKeyExistsInsensitive($routeDefault,$routes))
+        {
+            throw new DefaultException("default route {{$routeDefault}} has not been configured for the {$nameOfApp} application!",500,
+                    ['info' => 'check your appsettings file','internalCode' => 75]);
+        }
+
+        $requestUri = $this->app->getParamConfig('http.requestUri');
+        $requestUri = substr($requestUri,0,1) === '/' &&  mb_strlen($requestUri) > 1 ? substr($requestUri,1) : $requestUri;
+        
+        $routeKey = Collections::arrayKeyExistsInsensitive($requestUri,$routes) ? $requestUri : $routeDefault;
+
+        if(!Collections::arrayKeyExistsInsensitive($routeKey,$routes))
+        {
+            throw new DefaultException("route {{$requestUri}} not found!",404,
+                    ['info' => 'check your configuration route file','internalCode' => 77]);
+        }
+
+        $route = Collections::getElementArrayKeyInsensitive($routeKey,$routes);
+
+        $this->config['http']['route'] = $route['element'];
+        $this->config['http']['route']['routeKey'] = $routeKey;
+        $this->app->parseRouteConfig($this->config);
+
+        return $this;
+    }
 
     private function paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters)
     {
@@ -51,74 +95,91 @@ class RequestKora
                 throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('appName')}` !",400);
             }
         }
+
     }
 
-    public function configRequest()
+    private function _configAction()
     {
-        $config = $this->app->getParamConfig('config','public');
-        $appName = $config['appName'];
-        $className = sprintf("%sController",$this->app->getParamConfig('route.controller'));
-        $namespace = "app\\$appName\\controllers\\$className";
-        $namepaceParent = "kora\bin\\ControllerKora";
-        $appPath = $config['appPath'];
+        $configAction = $this->app->getParamConfig('http.route.action');
+        $action = key($configAction);
+        $filters = Collections::arrayKeyExistsInsensitive('filters',$configAction[$action]) ? $configAction[$action]['filters'] : [];
+        $controller = $this->app->getParamConfig('http.controller.namespace');
 
-        $path = "$appPath/controllers/$className.php";
-
-        if(!file_exists($path) || !class_exists($namespace))
+        if(!method_exists($controller,$action))
         {
-            throw new DefaultException("controller {$className} does not exists!",404);
-        }
-        else if(!is_subclass_of($namespace,$namepaceParent))
-        {
-            throw new DefaultException("controller {$className} is not a subclass of ControllerKora!",404);
+            throw new DefaultException("Controller {$controller} does not contains {$action} method!",404);
         }
 
-        $controller = $this->app->getParamConfig('route.controller');
-        $action = $this->app->getParamConfig('route.action');
-        $cUrl = $this->app->getParamConfig('route.cUrl');
-        $aUrl = $this->app->getParamConfig('route.aUrl');
+        $this->app->setParamConfig('http.action',[
+            'name' => $action,
+            'filters' => $filters,
+            'controller' => $controller
+        ],'protected');
 
-        if(!method_exists($namespace,$action))
-        {
-            throw new DefaultException("Route {$controller}/{$action} not found!",404);
-        }
+        return $this;
+    }
 
-        $requestOptions =     
-        [
-            'appPath' => $appPath,
-            'className' => $this->app->getParamConfig('route.controller'),
-            'controller' => $className,
-            'action' => $this->app->getParamConfig('route.action'),
-            'namespace' => $namespace,
-            'route' => $this->app->getParamConfig('route.name'),
-            'cUrl' => $cUrl,
-            'aUrl' => $aUrl
-        ];
-
-        $this->app->setParamConfig('config.http.request',$requestOptions);
+    private function _configUrl()
+    {
+        $nameOfApp = $this->app->getParamConfig('app.name');
+        $action = $this->app->getParamConfig('http.action.name');
 
         $baseUrl = "{$this->Request->getSchemeAndHttpHost()}{$this->Request->getBaseUrl()}";
 
-        $this->app->setParamConfig('config.http.request.baseUrl',$baseUrl);
-        $this->app->setParamConfig('config.http.request.urlApp',"{$baseUrl}/app/{$appName}");
-        $this->app->setParamConfig('config.http.request.urlViews',"{$baseUrl}/app/{$appName}/views");
-        $this->app->setParamConfig('config.http.request.urlView',"{$baseUrl}/app/{$appName}/views/{$cUrl}");
-        $this->app->setParamConfig('config.http.request.urlViewsSections',"{$baseUrl}/app/{$appName}/views/sections");
-        $this->app->setParamConfig('config.http.request.urlPublicTemplates',"{$baseUrl}/app/{$appName}/public/templates");
-        $this->app->setParamConfig('config.http.request.urlPublicAssets',"{$baseUrl}/app/{$appName}/public/assets");
-        $this->app->setParamConfig('config.http.request.urlPublicAssetsCss',"{$baseUrl}/app/{$appName}/public/assets/css");
-        $this->app->setParamConfig('config.http.request.urlPublicAssetsJs',"{$baseUrl}/app/{$appName}/public/assets/js");
-        $this->app->setParamConfig('config.http.request.urlPublicAssetsImg',"{$baseUrl}/app/{$appName}/public/assets/img");
-        $this->app->setParamConfig('config.http.request.urlPublicAssetsFonts',"{$baseUrl}/app/{$appName}/public/assets/fonts");
+        $this->app->setParamConfig('http.request.urls',[
+            'baseUrl' => $baseUrl,
+            'urlApp' => "{$baseUrl}/app/{$nameOfApp}",
+            'urlViews' => "{$baseUrl}/app/{$nameOfApp}/views",
+            'urlView' => "{$baseUrl}/app/{$nameOfApp}/views/{$action}",
+            'urlViewsSections' => "{$baseUrl}/app/{$nameOfApp}/views/sections",
+            'urlPublicTemplates' => "{$baseUrl}/app/{$nameOfApp}/public/templates",
+            'urlPublicAssets' => "{$baseUrl}/app/{$nameOfApp}/public/assets",
+            'urlPublicAssetsCss' => "{$baseUrl}/app/{$nameOfApp}/public/assets/css",
+            'urlPublicAssetsJs' => "{$baseUrl}/app/{$nameOfApp}/public/assets/js",
+            'urlPublicAssetsImg' => "{$baseUrl}/app/{$nameOfApp}/public/assets/img",
+            'urlPublicAssetsFonts' => "{$baseUrl}/app/{$nameOfApp}/public/assets/fonts"
+        ],'protected');
+
+        return $this;
     }
 
-    public function paramsRequest()
+    private function _configController()
     {
-        $currentRoute = $this->app->getParamConfig('route');
+        $nameOfApp = $this->app->getParamConfig('app.name');
+        $pathApp = $this->app->getParamConfig('app.path');
+        $controller = $this->app->getParamConfig('http.route.controller');
+        $Class = "{$controller}Controller";
+        $namespaceClass = "app\\$nameOfApp\\controllers\\$Class";
+        $path = "{$pathApp}/controllers/$Class.php";
+        $namespaceParent = "kora\bin\\ControllerKora";
+
+        if(!file_exists($path) || !class_exists($namespaceClass))
+        {
+            throw new DefaultException("controller {$Class} does not exists!",404);
+        }
+        else if(!is_subclass_of($namespaceClass,$namespaceParent))
+        {
+            throw new DefaultException("controller {$Class} is not a subclass of ControllerKora!",404);
+        }
+
+        $this->app->setParamConfig('http.controller',[
+            'name' => $controller,
+            'class' => $Class,
+            'namespace' => $namespaceClass,
+            'namespaceParent' => $namespaceParent,
+            'path' => $path
+        ],'protected');
+
+        return $this;
+    }
+
+    private function _paramsRequest()
+    {
+        $route = $this->app->getParamConfig('http.route');
 
         $httpMethod = mb_strtolower($this->Request->getMethod());
 
-        if(!array_key_exists($httpMethod,$currentRoute['keyParams']))
+        if(!Collections::arrayKeyExistsInsensitive($httpMethod,$route['keyParams']))
         {
             throw new DefaultException("The HTTP method `{$httpMethod}` is not allowed!",400);
         }
@@ -142,17 +203,17 @@ class RequestKora
         $formParameters = array_merge($formCollection['x-www-form-urlencoded'],$formCollection['form-data-body'],$formCollection['json']);
         $queryParameters = $this->Request->query->all();
 
-        $params = $currentRoute['keyParams'][$httpMethod];
+        $params = $route['keyParams'][$httpMethod];
 
         $this->paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters);
 
-
-   
         $allParams = array_merge($queryParameters,$formParameters);
 
-        $this->app->setParamConfig('config.http',[
+        $this->app->setParamConfig('http.route.params',[
             'method' => $httpMethod,
             'parameters' => $allParams
-        ]);
+        ],'protected');
+       
+        return $this;
     }
 }

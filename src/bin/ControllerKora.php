@@ -29,9 +29,9 @@ abstract class ControllerKora
         exit(header('location:'.$url));
     }
 
-    protected function getParamConfig($key)
+    protected function getParamConfig($key,$level = 'public')
     {
-        return self::$app->getParamConfig($key,'public');
+        return self::$app->getParamConfig($key,$level);
     }
     
     private static function start(AppKora $app)

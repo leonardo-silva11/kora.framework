@@ -173,30 +173,31 @@ abstract class IntermediatorKora
 
     private static function callFilter(string $key) : BagKora|IntermediatorResponseKora
     {
-        $filters = self::$app->getParamConfig('config.http.filters','public');
-  
-        $nameBag = sprintf("filters%s",ucfirst($key));
+        $filters = self::$app->getParamConfig('http.filters');
+        $keyBag = ucfirst($key);
+        $nameBag = "filters{$keyBag}";
         $bag = new BagKora($nameBag);
 
         if(array_key_exists($key,$filters))
         {
             foreach($filters[$key] as $filter)
             {
+                $class = $filter['class'];
+
                 $methods = $filter['methods'];
              
                 for($i = 0; $i < count($methods); ++$i)
                 {
-                    $class = $filter['class'];
                     $method = $methods[$i];
+                
                     $services = self::$serviceContainer->resolveSingleFiltersDependencies($key,$class,$method);
-                   
+           
                     $response = self::$filterKora->callSingleFilter(self::$controller,$filter,$methods[$i],$services,$key);
 
                     $data = $response->getResponse($methods[$i]);
-                  
                     self::$app->addInjectable($response->getName(),$response);
                     $bag->add($response->getName(),$response);
-
+     
                     if(gettype($data) == 'object' && ($data instanceof IntermediatorResponseKora || $data instanceof Response))
                     {
                        return $data;
@@ -204,7 +205,7 @@ abstract class IntermediatorKora
                 }
             }
         }
-    
+
         return $bag;
     }
 }

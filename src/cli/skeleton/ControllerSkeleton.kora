@@ -1,22 +1,26 @@
 <?php
 namespace app\{{appName}}\controllers;
 
-use Harp\bin\HarpResponse;
-use Harp\bin\HarpController;
-use App\{{appName}}\modules\{{moduleName}}\model\{{nameController}}Model;
-{{namespace_view}}
+use kora\bin\BagKora;
+use kora\bin\ControllerKora;
+use kora\bin\DefaultResponseKora;
+use kora\lib\exceptions\DefaultException;
+use app\{{appName}}\models\{{nameController}}Model;
 
-
-class {{nameController}}Controller extends HarpController
+class {{nameController}}Controller extends ControllerKora
 {
-    private ${{nameController}}Model;
-
-    public function __construct({{attributesConstruct}})
+    public function __construct()
     {
         parent::__construct();
-
-        $this->{{nameController}}Model = new {{nameController}}Model();
     }
-    
-    {{defaultMethod}}
+
+    public function {{nameMethod}}
+    (
+        {{params}}
+    )
+    {    
+        return new DefaultResponseKora(\json_encode(['myKey' => 'myValue']),200,['Content-Type' => 'application/json']);
+    }
 }
+
+
