@@ -34,11 +34,10 @@ class RequestKora
                 (!in_array("*",$params['optional']) && !in_array($p,$params['optional'])) 
                 &&
                 (!in_array("*",$params['required']) && !in_array($p,$params['required']))
-
               )
             {
 
-                throw new DefaultException("The parameter `{$p}` is not allowed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('appName')}` !",400);
+                throw new DefaultException("The parameter `{$p}` is not allowed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
             }
     }
 
@@ -57,7 +56,7 @@ class RequestKora
 
         $requestUri = $this->app->getParamConfig('http.requestUri');
         $requestUri = substr($requestUri,0,1) === '/' &&  mb_strlen($requestUri) > 1 ? substr($requestUri,1) : $requestUri;
-        
+        $requestUri = explode('?',$requestUri)[0];
         $routeKey = Collections::arrayKeyExistsInsensitive($requestUri,$routes) ? $requestUri : $routeDefault;
 
         if(!Collections::arrayKeyExistsInsensitive($routeKey,$routes))
@@ -77,25 +76,29 @@ class RequestKora
 
     private function paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters)
     {
-        foreach($queryParameters as $k => $p)
+        $ignoreParameters = $this->app->getParamConfig('http.action.ignoreParameters');
+
+        if(!$ignoreParameters)
         {
-            $this->paramsRequestValidateAll($httpMethod,$params,$k);
-            
-        }
-      
-        foreach($formParameters as $k => $p)
-        {
-            $this->paramsRequestValidateAll($httpMethod,$params,$k);
-        }
-     
-        foreach($params['required'] as $p)
-        {
-            if(!array_key_exists($p,$queryParameters) && !array_key_exists($p,$formParameters))
+            foreach($queryParameters as $k => $p)
             {
-                throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('appName')}` !",400);
+                $this->paramsRequestValidateAll($httpMethod,$params,$k);
+                
+            }
+          
+            foreach($formParameters as $k => $p)
+            {
+                $this->paramsRequestValidateAll($httpMethod,$params,$k);
+            }
+    
+            foreach($params['required'] as $p)
+            {
+                if(!array_key_exists($p,$queryParameters) && !array_key_exists($p,$formParameters))
+                {
+                    throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
+                }
             }
         }
-
     }
 
     private function _configAction()
@@ -104,6 +107,11 @@ class RequestKora
         $action = key($configAction);
         $filters = Collections::arrayKeyExistsInsensitive('filters',$configAction[$action]) ? $configAction[$action]['filters'] : [];
         $controller = $this->app->getParamConfig('http.controller.namespace');
+        $ignoreParameters = Collections::arrayKeyExistsInsensitive('ignoreParameters',$configAction[$action])
+                            ?
+                            Collections::getElementArrayKeyInsensitive('ignoreParameters',$configAction[$action])['element']
+                            : 
+                            false;
 
         if(!method_exists($controller,$action))
         {
@@ -113,7 +121,8 @@ class RequestKora
         $this->app->setParamConfig('http.action',[
             'name' => $action,
             'filters' => $filters,
-            'controller' => $controller
+            'controller' => $controller,
+            'ignoreParameters' =>  $ignoreParameters
         ],'protected');
 
         return $this;

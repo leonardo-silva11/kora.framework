@@ -75,21 +75,6 @@ class RouterKora
         return $p;
     }
 
-
-    private function defaultRouteParse(Array &$matchRoute)
-    {
-            
-        if(!empty($matchRoute['current']['cUrl']) && empty($matchRoute['current']['aUrl']))
-        {
-            $matchRoute['current']['aUrl'] = $matchRoute['default']['segmentPath'][1];
-        }
-        else if($matchRoute['default']['isDefaultApp'] && empty($matchRoute['current']['cUrl']) && empty($matchRoute['current']['aUrl']))
-        {
-            $matchRoute['current']['cUrl'] = $matchRoute['default']['segmentPath'][0];
-            $matchRoute['current']['aUrl'] = $matchRoute['default']['segmentPath'][1];
-        }
-    }
-
     private function defineDefaultApp(array &$config): void
     {
         if(!is_array($config['appSettings']['apps']) || empty($config['appSettings']['apps']))
@@ -111,7 +96,7 @@ class RouterKora
         $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
         $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
         $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
-
+   
         if(empty($appConfig))
         {
             throw new DefaultException("app config in {appsettings.json} it's misconfigured or does not exist!",500);
@@ -121,7 +106,7 @@ class RouterKora
         $config['app']['config'] = $appConfig;
 
         $Class = "app\\{$config['app']['name']}\\{$config['app']['class']}";
-
+    
         $path =  $config['pathOfProject'].DIRECTORY_SEPARATOR.
                 "app".DIRECTORY_SEPARATOR.
                 $config['app']['name'].DIRECTORY_SEPARATOR.

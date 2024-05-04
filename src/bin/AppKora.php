@@ -194,6 +194,7 @@ abstract class AppKora
 
         if($throwExcpt && $search === null)
         {
+            dd('dont undestading!',$key);
             throw new DefaultException("{{$key}} not found in configuration access {$source}!",404);
         }
 
