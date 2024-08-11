@@ -103,7 +103,7 @@ class RequestKora
 
     private function _configAction()
     {
-        $configAction = $this->app->getParamConfig('http.route.action');
+        $configAction = $this->app->getParamConfig('http.route.actions');
         $action = key($configAction);
         $filters = Collections::arrayKeyExistsInsensitive('filters',$configAction[$action]) ? $configAction[$action]['filters'] : [];
         $controller = $this->app->getParamConfig('http.controller.namespace');

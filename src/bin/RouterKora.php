@@ -90,13 +90,18 @@ class RouterKora
     {
         $requestUri = $config['http']['requestUri'];
         $requestUriCollection = $config['http']['requestUriCollection'];
+        
+        if(empty($requestUriCollection))
+        {
+            array_push($requestUriCollection,$config['appSettings']['defaultApp']);
+        }
 
         $app = mb_strtolower($requestUriCollection[0]);
 
         $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
         $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
         $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
-   
+
         if(empty($appConfig))
         {
             throw new DefaultException("app config in {appsettings.json} it's misconfigured or does not exist!",500);
@@ -169,13 +174,15 @@ class RouterKora
         $m1->setAccessible(true);
         $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$FilterKora,$controller]);
         $m1->setAccessible(false);
-        
+
         if($response instanceof BagKora)
         {
             $this->app->addInjectable($response->getName(),$response);
           
             $parameters = $serviceContainer->filterRouteParameters($controller);
             $action = $this->app->getParamConfig('http.action.name');
+            $services = $serviceContainer->resolveRouteDependencies();
+            $parameters += $services;
             $response = $controller->$action(...$parameters);
         }
 

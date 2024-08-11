@@ -167,7 +167,7 @@ abstract class IntermediatorKora
         self::$filterKora = $filterKora;
         self::$serviceContainer = $serviceContainer;
         self::$controller = $controller;
-        
+
         return self::callFilter('before');
     }
 
@@ -191,7 +191,7 @@ abstract class IntermediatorKora
                     $method = $methods[$i];
                 
                     $services = self::$serviceContainer->resolveSingleFiltersDependencies($key,$class,$method);
-           
+        
                     $response = self::$filterKora->callSingleFilter(self::$controller,$filter,$methods[$i],$services,$key);
 
                     $data = $response->getResponse($methods[$i]);

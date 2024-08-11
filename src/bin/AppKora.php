@@ -95,11 +95,12 @@ abstract class AppKora
 
     private function parseCurrentAllowedKeyParams(array &$config)
     {
-        $configAction = $this->getParamConfig('http.route.action');
+      
+        $configAction = $this->getParamConfig('http.route.actions');
         $action = key($configAction);
         $verbs = $configAction[$action]['verbs'];
         $this->app['protected']['http']['route']['keyParams'] = []; 
-
+   
         if(!empty($verbs))
         {
             foreach($verbs as $k => $verb)
@@ -142,6 +143,8 @@ abstract class AppKora
                 }
             }
         }
+
+      
     }
 
     public function setParamConfig($key, $value, $level = 'public')
@@ -194,7 +197,6 @@ abstract class AppKora
 
         if($throwExcpt && $search === null)
         {
-            dd('dont undestading!',$key);
             throw new DefaultException("{{$key}} not found in configuration access {$source}!",404);
         }
 

@@ -47,10 +47,19 @@ class FileManager
 
     public function save(string $name, mixed $data, bool $rewrite = true)
     {
-
         if($rewrite || (!$rewrite && !$this->exists($name)))
         {
             return file_put_contents($this->getNewPathFile($name),$data);
+        }
+
+        return false;
+    }
+
+    public function remove(string $filename)
+    {
+        if($this->exists($filename))
+        {
+            return unlink($this->getNewPathFile($filename));
         }
 
         return false;
