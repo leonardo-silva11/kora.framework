@@ -27,7 +27,11 @@ abstract class AppKora
                 'app' => $config['app'],
                 'http' => $config['http'],
                 'appSettings' => $config['appSettings'],
-                'storage' => $config['storage']
+                'storage' => $config['storage'],
+                'paths' => 
+                [
+                    'pathOfProject' => $config['pathOfProject']
+                ]
             ]
         ];
     }
@@ -184,6 +188,7 @@ abstract class AppKora
 
     public function getParamConfig(string $key,string $source = 'protected',bool $throwExcpt = true)
     {
+
         if($source != 'protected' && $source != 'public')
         {
             throw new DefaultException("{{$key}} is invalid to access parameter config, allowed sources are: {public} or {protected}!",404);

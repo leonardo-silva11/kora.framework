@@ -4,6 +4,7 @@ namespace kora\bin;
 use kora\lib\collections\Collections;
 use Symfony\Component\HttpFoundation\Request;
 use kora\lib\exceptions\DefaultException;
+use kora\lib\strings\Strings;
 
 class RequestKora
 {
@@ -19,10 +20,12 @@ class RequestKora
 
         $this->Request = $config['http']['request']['instance'];
 
-        $this->parseCurrentRoute()
+        $this->_httpOriginCheck()
+        ->parseCurrentRoute()
              ->_configController()
              ->_configAction()
              ->_configUrl()
+             ->_configPaths()
              ->_paramsRequest();
 
         return $this;
@@ -66,7 +69,6 @@ class RequestKora
         }
 
         $route = Collections::getElementArrayKeyInsensitive($routeKey,$routes);
-
         $this->config['http']['route'] = $route['element'];
         $this->config['http']['route']['routeKey'] = $routeKey;
         $this->app->parseRouteConfig($this->config);
@@ -128,11 +130,37 @@ class RequestKora
         return $this;
     }
 
+    private function _httpOriginCheck()
+    {
+        if(!$this->config['ignoreOrigin'])
+        {
+            $origin = $this->config['http']['request']['instance']->headers->get('Origin')  ?? Strings::empty;
+        
+            if (!in_array($origin, $this->config['allowedOrigins'])) {
+                
+                //missed HTTP_ORIGIN header
+                throw new DefaultException("the origin HTTP_ORIGIN was not available in the request",403);
+            }
+            header("Access-Control-Allow-Origin: $origin");
+            // Permitir métodos HTTP específicos
+            header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+    
+            // Permitir headers específicos na requisição
+            header("Access-Control-Allow-Headers: Content-Type, Authorization");
+    
+            // Permitir o envio de cookies e outras credenciais
+            header("Access-Control-Allow-Credentials: true");
+    
+        }
+
+        return $this;
+    }
+
+
     private function _configUrl()
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
         $action = $this->app->getParamConfig('http.action.name');
-
         $baseUrl = "{$this->Request->getSchemeAndHttpHost()}{$this->Request->getBaseUrl()}";
 
         $this->app->setParamConfig('http.request.urls',[
@@ -148,6 +176,19 @@ class RequestKora
             'urlPublicAssetsImg' => "{$baseUrl}/app/{$nameOfApp}/public/assets/img",
             'urlPublicAssetsFonts' => "{$baseUrl}/app/{$nameOfApp}/public/assets/fonts"
         ],'protected');
+
+        return $this;
+    }
+
+    private function _configPaths()
+    {
+        $nameOfApp = $this->app->getParamConfig('app.name');
+        $pathOfProject = $this->app->getParamConfig('paths.pathOfProject');
+
+        $dirSep = DIRECTORY_SEPARATOR;
+        $this->app->setParamConfig('paths.app',"{$pathOfProject}{$dirSep}app{$dirSep}{$nameOfApp}",'protected');
+        $this->app->setParamConfig('paths.views',"{$pathOfProject}{$dirSep}app{$dirSep}{$nameOfApp}{$dirSep}views",'protected');
+        $this->app->setParamConfig('paths.public',"{$pathOfProject}{$dirSep}app{$dirSep}{$nameOfApp}{$dirSep}public",'protected');
 
         return $this;
     }

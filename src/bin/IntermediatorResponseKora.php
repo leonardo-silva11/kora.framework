@@ -31,8 +31,6 @@ class IntermediatorResponseKora implements IMenssengerKora
         $this->refIntermediator = new ReflectionObject($Intermediator);
         
         $this->makeReponse($data,$config,$filterResponseKoraAfter);
-
-
     }
 
     private function makeReponse

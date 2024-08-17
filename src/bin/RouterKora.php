@@ -97,7 +97,7 @@ class RouterKora
         }
 
         $app = mb_strtolower($requestUriCollection[0]);
-
+ 
         $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
         $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
         $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
@@ -111,7 +111,7 @@ class RouterKora
         $config['app']['config'] = $appConfig;
 
         $Class = "app\\{$config['app']['name']}\\{$config['app']['class']}";
-    
+            //colocar validações de chaves app.name e app.class
         $path =  $config['pathOfProject'].DIRECTORY_SEPARATOR.
                 "app".DIRECTORY_SEPARATOR.
                 $config['app']['name'].DIRECTORY_SEPARATOR.
@@ -164,7 +164,7 @@ class RouterKora
         $controller = new $controllerClass(...$constructorDependencies);
 
         $refMethod = new ReflectionMethod(ControllerKora::class, 'start');
-        $refMethod->setAccessible(true); // Permitir acesso ao método privado
+        $refMethod->setAccessible(true);
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
 
