@@ -2,14 +2,15 @@
 <?php
 namespace kora\cli\cmd;
 
-use Symfony\Component\Filesystem\Filesystem;
-
+use kora\lib\storage\DirectoryManager;
+use kora\lib\storage\FileManager;
 
 class MakeControllerCommand extends CommandCli
 {
-    public function __construct(string $path)
+
+    public function __construct($path)
     {
-        parent::__construct($this,$path);
+        parent::__construct($this, $path);
     }
 
     public function exec()
@@ -19,29 +20,53 @@ class MakeControllerCommand extends CommandCli
         $this->createController($baseFile);
     }
 
-    public function createController($baseFile)
+    public function createController(DirectoryManager $dir, $app, $controller, $action, bool $rewrite = false)
     {
-        $nameController = ucfirst($this->cmdArgs[0]);
-    
-        $forceOverwrite =  OptionsCli::getOption('-f',$this->cmdArgs) != null;
-        $method = OptionsCli::getOption('--m',$this->cmdArgs);
-        $method = empty($method) ? 'index' : $this->getAndValidate($method,'method');
-        $params = '';
-  
-        $baseFile = str_ireplace([
-            '{{appName}}',
-            '{{nameController}}',
-            '{{nameMethod}}',
-            '{{params}}'
-        ],[
-           $this->app['lowerName'],
-           $nameController,
-           $method,
-           $params
-        ],[$baseFile]);
+        $nameController = ucfirst($controller);
+        $nameFullController = $nameController.'Controller';
 
-        $this->save($this->paths['defaultDirectoryControllerPath'],"{$nameController}Controller",$baseFile,$forceOverwrite);
+        $basePath = dirname(__DIR__, 1);
 
-        $this->log->save("Controller {$nameController} created sucessfully for app {$this->app['lowerName']}!",true);
+        $pathControllers = $dir->createInMemory($dir->getCurrentStorage(),"controllers");
+        $dirController = $dir->createByPath($pathControllers);
+
+        $file = new FileManager($dirController);
+
+        if(!$file->exists("$nameFullController.php") || $rewrite)
+        {
+            $nameAppLower = strtolower($app);
+            $MakeConfig = new MakeConfig($nameAppLower);
+            $type = $MakeConfig->readSettingsByKey("apps.$app.defaultType");
+
+            if($type == 'app')
+            {
+                $base = file_get_contents("$basePath/skeleton/ControllerSkeletonApp.kora");
+            }
+            else
+            {
+                $base = file_get_contents("$basePath/skeleton/ControllerSkeletonApi.kora");
+            }
+
+                $fileClass = str_ireplace(                                
+                [
+                    '{{__nameController}}',
+                    '{{__nameApp}}',
+                    '{{__action}}'
+                ],
+                [
+                    $nameController,
+                    $nameAppLower,
+                    $action
+                ],$base);
+
+            $file->save("$nameFullController.php",$fileClass);
+
+            $this->log->save("Class {$nameFullController} created!");
+        }
+        else
+        {
+            $this->log->save("Class {$nameFullController} alredy exists!");
+        }
+        $this->log->showAllBag(false);
     }
 }

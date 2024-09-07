@@ -1,0 +1,13 @@
+<?php
+namespace app\{{__nameApp}}\models;
+
+class {{__nameModel}}Model
+{
+    public function __construct(){}
+
+    public function {{__action}}()
+    {
+        return ['My Data 1',1,'My Data 2'];
+    }
+}
+

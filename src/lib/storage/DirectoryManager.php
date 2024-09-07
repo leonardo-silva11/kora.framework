@@ -18,13 +18,21 @@ class DirectoryManager
         "/var"
     ];
 
-    public function __construct(string $storage = null, array $defaultDrives =[], bool $readOnly = false) 
+    public function __construct(string $storage = null, array $defaultDrives =[], bool $readOnly = false, bool $createPath = false) 
     {
         $this->defaultDrives = !empty($defaultDrives) ? $defaultDrives : $this->defaultDrives;
         $this->storage = $storage ?? $this->storage;
         $this->readOnly = $readOnly;
-        $this->defaultDrive(); 
-        $this->loadStorage();      
+
+        if(!$createPath)
+        {
+            $this->defaultDrive(); 
+            $this->loadStorage();  
+        }
+        else
+        {
+            $this->_createByPath($storage);
+        }
     }
 
     private function defaultDrive() : void
@@ -52,10 +60,10 @@ class DirectoryManager
 
     private function saveDirectory($path)
     {
- 
         if(!is_dir($path))
         {      
-            mkdir($path,0770);
+
+            mkdir($path,0770,true);
             chmod($path,0770);
         }
 
@@ -89,6 +97,30 @@ class DirectoryManager
         return $cd;
     }
 
+    public function createInMemory($path,$directory)
+    {
+        return $this->normalizePath("$path/$directory");
+    }
+
+    private function _createByPath($path)
+    {
+        $p = explode($this->getDirectorySeparator(),$path);
+        $first = $p[0];
+        $this->currentDrive = empty($first) ? "/$p[1]" : $p[0];
+        unset($p[0]);
+        
+        if(empty($first)){  unset($p[1]); };
+
+        $this->storage = implode($this->getDirectorySeparator(),$p);
+
+        $this->loadStorage();
+    }
+
+    public function createByPath(string $path)
+    {
+        return new DirectoryManager($path,[],false,true);
+    }
+
     public function createOrForward($directory) : mixed
     {
         if
@@ -99,7 +131,7 @@ class DirectoryManager
                 && 
                 !$this->directoryExists($directory))
         {
-            return $this->saveDirectory("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directory}");
+            return $this->saveDirectory($this->normalizePath("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directory}"));
         }
         else if($this->directoryExists($directory))
         {
@@ -112,6 +144,7 @@ class DirectoryManager
     private function loadStorage()
     {
         $path = $this->getCurrentStorage();
+
         $this->saveDirectory($path);
     }
 
@@ -125,6 +158,16 @@ class DirectoryManager
         return DIRECTORY_SEPARATOR;
     }
 
+    private function normalizePath(string $path) : string
+    {
+        if(!empty($path))
+        {
+            $path = str_ireplace(["\\","/"],$this->getDirectorySeparator(),$path);
+        }
+
+        return $path;
+    }
+
     public function directoryExists(string $directoryName) : bool
     {
         if(empty($directoryName))
@@ -132,7 +175,7 @@ class DirectoryManager
             throw new DefaultException("directory name is empty!",403);
         }
 
-        return is_dir("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directoryName}");
+        return is_dir($this->normalizePath("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directoryName}"));
     }
 
     public function newStorage(string $directory)
@@ -141,16 +184,16 @@ class DirectoryManager
 
         $basePathArray = explode($this->getDirectorySeparator(),$this->getCurrentStorage());
         $basePathArray = array_values(array_filter($basePathArray));
-        unset($basePathArray[0]);
         $basePathArray = array_values($basePathArray);
         $basePath = implode($this->getDirectorySeparator(),$basePathArray);
-
         return new DirectoryManager("{$basePath}{$this->getDirectorySeparator()}{$directory}");
     }
 
     public function getCurrentStorage()
     {
-        return  !empty($this->currentStorage) ? $this->currentStorage : "{$this->currentDrive}{$this->getDirectorySeparator()}{$this->storage}";
+        $p  =  !empty($this->currentStorage) ? $this->currentStorage : "{$this->currentDrive}{$this->getDirectorySeparator()}{$this->storage}";
+
+        return $this->normalizePath($p);
     }
 
     public function cloneStorage()

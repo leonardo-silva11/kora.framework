@@ -16,6 +16,8 @@ class Log
     {
         $this->directoryManager = $directoryManager;
 
+        $this->directoryManager->createOrForward('log');
+
         return $this;
     }
 
@@ -36,7 +38,7 @@ class Log
         $fileName = sprintf("%s.%s",(new DateTime())->format('Y-m-d.H'),"txt");
         $dateNow = (new DateTime())->format('d/m/Y H:i:s');
 
-        $pathLog = $this->directoryManager->getCurrentStorage();
+        $pathLog = str_ireplace(["\\","/"],$this->directoryManager->getDirectorySeparator(),$this->directoryManager->getCurrentStorage());
         $pathFile = "{$pathLog}{$this->directoryManager->getDirectorySeparator()}{$fileName}";
 
         try

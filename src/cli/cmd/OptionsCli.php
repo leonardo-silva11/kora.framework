@@ -24,7 +24,15 @@ class OptionsCli
     {
         $result = array_filter($args, function($value)  use ($option)  
         {
-            return explode('=',$value)[0] === $option;
+            $opt1 = $option;
+            $opt2 = $option;
+
+            if(substr($option,0,2) == '--')
+            {
+                $opt2 = '-'.substr($option,2,1);
+            }
+
+            return explode('=',$value)[0] === $opt1 || explode('=',$value)[0] === $opt2;
         });
 
         $val = null;
@@ -33,6 +41,18 @@ class OptionsCli
         {
             $exp = explode('=',end($result));
             $val = array_key_exists(1,$exp) ? $exp[1] : $exp[0];
+        }
+
+        return $val;
+    }
+
+    public static function getArg(int $key,array $args)
+    {
+        $val = null;
+
+        if(is_int($key))
+        {
+            $val = array_key_exists($key,$args) ? $args[$key] : $val;
         }
 
         return $val;

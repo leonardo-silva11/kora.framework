@@ -1,14 +1,34 @@
 <?php
-namespace app\{{__namespace}};
+namespace app\{{__name}};
 
-use kora\bin\AppKora as {{__alias}};
+use kora\bin\AppKora;
 
-class {{__name}} extends {{__alias}}
+class {{__name}} extends AppKora
 {   
-   public function __construct()
-   {
-       parent::__construct($this);   
-   }
+    public function __construct(array &$config)
+    {
+        parent::__construct($this, $config); 
+    }
 
-   public function config(){}
+    public function extraConfig(): void 
+    {
+       //Extra configuration
+       /**
+       * Example with config database
+       **/
+       // $appName = $this->getName();
+       // $dbConfig = $this->getParamConfig("appSettings.apps.{$appName}.connectionStrings.xxx");
+       // $CapsuleManager = new CapsuleManager();
+       // $CapsuleManager->addConnection($dbConfig);
+       // $CapsuleManager->setAsGlobal();
+       // $CapsuleManager->bootEloquent();
+
+       /**
+       * Example inject instance
+       **/
+        //$this->addInjectable(Request::class, $this->getParamConfig('http.request.instance'));
+        //$this->addInjectable(DirectoryManager::class, $this->getParamConfig('storage.defaultStorage'));
+        //$this->addInjectable(CapsuleManager::class, $CapsuleManager);
+        //$this->addInjectable('MyKey, 'My String Static');
+    }
 }

@@ -2,84 +2,63 @@
 <?php
 namespace kora\cli\cmd;
 
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\ConsoleOutput;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Filesystem\Filesystem;
+use Directory;
+use kora\lib\storage\DirectoryManager;
+use kora\lib\storage\FileManager;
 
-
-class MakeAppCommand
+class MakeAppCommand  extends CommandCli
 {
-    public function __construct(){}
+    public function __construct(string $path)
+    {
+        parent::__construct($this,$path);
+    }
 
     public function exec()
     {
-        $app = new Application();
-
-        $app->register('make:app')
-            ->addArgument('name', InputArgument::REQUIRED)
-            ->addOption('controller',null,InputOption::VALUE_OPTIONAL)
-            ->addOption('action',null,InputOption::VALUE_OPTIONAL)
-            ->addOption('type',null,InputOption::VALUE_OPTIONAL)
-            ->setCode(function ($input, $output) 
-            {
-                $name = $input->getArgument('name');
-                $controller = $input->getOption('controller');
-                $action = $input->getOption('action');
-                $type = $input->getOption('type');
-
-                $controller = $controller ?? 'Home';
-                $action = $action ?? 'index';
-                $type = $type ?? 'app';
-
-                $output->writeln("Criando aplicativo: {$name}...");
-                $this->createDirectories($name, $output);
-                $this->createAppClass($name);
-                $this->createController($name, $controller, $action);
-                
-            });
-            $app->run();
+        dd('vamos começar a criar o app');
     }
 
-    private function createController($app, $controller, $action)
+    public function createControllerClass(DirectoryManager $dirManager,$app, $controller, $action)
     {
-        (new MakeControllerCommand())->createController($app, $controller, $action);
+        $MakeController = new MakeControllerCommand($this->paths['project']);
+        $MakeController->createController($dirManager, $app, $controller, $action);
     }
 
-    private function createAppClass($appName)
+    public function createmodelClass(DirectoryManager $dirManager,$app, $model, $action)
+    {
+        $MakeController = new MakeModelCommand($this->paths['project']);
+        $MakeController->createModel($dirManager, $app, $model, $action);
+    }
+
+
+    public function creatAppClass(DirectoryManager $dirManager,$nameApp, $rewrite = false)
     {
         $basePath = dirname(__DIR__, 1);
-        $appPath =  dirname($basePath, 5);
-        $className = ucfirst($appName);
-        $classPath = "$appPath/app/$appName/$className.php";
-        $fs = new Filesystem();
 
-        if(!$fs->exists($classPath))
+        $file = new FileManager($dirManager);
+
+        if(!$file->exists("$nameApp.php") || $rewrite)
         {
             $base = file_get_contents("$basePath/skeleton/AppSkeleton.kora");
 
-        
+            $fileClass = str_ireplace(                                
+            [
+                '{{__name}}',
+            ],
+            [
+                $nameApp,
+            ],$base);
 
-            $appClass = str_ireplace
-                            (
-                                [
-                                    '{{__namespace}}',
-                                    '{{__name}}',
-                                    '{{__alias}}'
-                                ],
-                                [
-                                    $appName,
-                                    ucfirst($appName),
-                                    $appName != 'AppKora' ? 'AppKora' : 'AppKoraAbstract'
-                                ],
-                                $base
-                            );
-            
-           
-            file_put_contents($classPath,$appClass); 
-        }   
+            $file->save("$nameApp.php",$fileClass);
+
+            $this->log->save("Class {$nameApp} created!");
+        }
+        else
+        {
+            $this->log->save("Class {$nameApp} alredy exists!");
+        }
+
+        $this->log->showAllBag(false);
     }
 
     private function createDirectories($appName,$output)
