@@ -58,10 +58,13 @@ class RequestKora
         }
 
         $requestUri = $this->app->getParamConfig('http.requestUri');
+
+        $requestUri = $routeDefault != $requestUri ? str_ireplace(["/$nameOfApp",$nameOfApp],Strings::empty,$requestUri) : $requestUri;
         $requestUri = substr($requestUri,0,1) === '/' &&  mb_strlen($requestUri) > 1 ? substr($requestUri,1) : $requestUri;
         $requestUri = explode('?',$requestUri)[0];
-        $routeKey = Collections::arrayKeyExistsInsensitive($requestUri,$routes) ? $requestUri : $routeDefault;
 
+        $routeKey = Collections::arrayKeyExistsInsensitive($requestUri,$routes) ? $requestUri : $routeDefault;
+      
         if(!Collections::arrayKeyExistsInsensitive($routeKey,$routes))
         {
             throw new DefaultException("route {{$requestUri}} not found!",404,
@@ -69,10 +72,11 @@ class RequestKora
         }
 
         $route = Collections::getElementArrayKeyInsensitive($routeKey,$routes);
+
         $this->config['http']['route'] = $route['element'];
         $this->config['http']['route']['routeKey'] = $routeKey;
         $this->app->parseRouteConfig($this->config);
-
+ 
         return $this;
     }
 
@@ -135,7 +139,7 @@ class RequestKora
         if(!$this->config['ignoreOrigin'])
         {
             $origin = $this->config['http']['request']['instance']->headers->get('Origin')  ?? Strings::empty;
-        
+
             if (!in_array($origin, $this->config['allowedOrigins'])) {
                 
                 //missed HTTP_ORIGIN header
@@ -150,6 +154,13 @@ class RequestKora
     
             // Permitir o envio de cookies e outras credenciais
             header("Access-Control-Allow-Credentials: true");
+       
+            if ($this->config['http']['request']['instance']->getMethod() == 'OPTIONS') 
+            {
+                http_response_code(200);
+                exit;
+               
+            }
     
         }
 
@@ -249,10 +260,10 @@ class RequestKora
         $this->Request->headers->get('Content-Type') === 'application/json' 
         ? json_decode($this->Request->getContent(),true)
         : []; 
-     
-        $formParameters = array_merge($formCollection['x-www-form-urlencoded'],$formCollection['form-data-body'],$formCollection['json']);
+    
+        $formParameters = array_merge($formCollection['x-www-form-urlencoded'],$formCollection['form-data-body'],$formCollection['json'] ?? []);
         $queryParameters = $this->Request->query->all();
-
+      
         $params = $route['keyParams'][$httpMethod];
 
         $this->paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters);
