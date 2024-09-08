@@ -6,7 +6,7 @@ use kora\lib\storage\DirectoryManager;
 use kora\lib\support\Log;
 use stdClass;
 
-class CommandCli
+abstract class CommandCli
 {
     protected $directorySeparator = DIRECTORY_SEPARATOR;
     protected array $cmdArgs = [];
@@ -14,10 +14,11 @@ class CommandCli
     protected array $settings = [];
     protected array $dbConfig = [];
     protected $app;
-    private CommandCli $Command;
+    protected CommandCli $Command;
     protected Log $log;
     protected DirectoryManager $directoryManager;
 
+    abstract function exec(array $arg);
 
     protected function __construct(CommandCli $Command,string $path)
     {
@@ -167,75 +168,7 @@ class CommandCli
         }
     }
 
-    public function setArgs(array $args)
-    {
-        $this->cmdArgs = array_values($args);
-        $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
-
-
-        if(empty($nameApp))
-        {
-            $this->log->save('name of app not found!',true);
-        }
-
-        $nameAppArray = explode('-',$nameApp);
-        $nameAppArray = count($nameAppArray) < 2 ? explode('_',$nameApp) : $nameAppArray;
-        $nameAppArrayN = array_map('ucfirst', $nameAppArray);
-        $nameAppN = implode('',$nameAppArrayN);
-        $nameAppLower = strtolower($nameAppN);
-
-        $forceBuild = OptionsCli::getOption('--rewrite',$this->cmdArgs) ?? false;
-        $controller = OptionsCli::getOption('--controller',$this->cmdArgs) ?? "Home";
-        $model = OptionsCli::getOption('--model',$this->cmdArgs) ?? "Home";
-        $front = OptionsCli::getOption('--front',$this->cmdArgs) ?? false;
-        $defaultExtensionView = OptionsCli::getOption('--extension',$this->cmdArgs) ?? "html";
-        $defaultTemplateView = OptionsCli::getOption('--template',$this->cmdArgs) ?? "$nameAppLower.v1.0";
-        $clientId = OptionsCli::getOption('--id_client',$this->cmdArgs) ?? "";
-        $clientSecret = OptionsCli::getOption('--secret_client',$this->cmdArgs) ?? "";
-        $action = OptionsCli::getOption('--action',$this->cmdArgs) ?? "index";
-
-        $nameControllerLower = strtolower($controller);
-        $nameActionLower = strtolower($action);
-
-        $this->paths['app'] = $this->directoryManager->createInMemory($this->paths['project'],"app/$nameAppLower");
-
-        $dir = $this->directoryManager->createByPath($this->paths['app']);
-
-        $this->Command->creatAppClass($dir,$nameAppN);
-        $MakeConfig = new MakeConfig($nameAppLower);
-        $MakeConfig->addSetting('defaultApp',$nameAppLower)
-                    ->addSetting('apps',[
-                        $nameAppN => [
-                            "defaultType" => $front ? "app" : "api",
-                            "defaultRoute" => "$nameControllerLower/$nameActionLower",
-                            "name" => $nameAppLower,
-                            "connectionStrings" => new stdClass()
-                        ]
-                    ]);
-
-        if($front)
-        {
-            $MakeConfig->addSetting("apps.$nameAppN.views",[
-                "defaultPageExtension" => $defaultExtensionView,
-                "defaultTemplate" => $defaultTemplateView,
-                "templates" => [$defaultTemplateView]
-            ]);
-        }
-
-        $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
-            "clientId" => $clientId,
-            "clientSecret" => $clientSecret,
-        ]);
-
-        $MakeConfig->settingsSave();
-
-        $this->Command->createControllerClass($dir, $nameAppN, $controller,$action);
-        $this->Command->createModelClass($dir, $nameAppN, $model,$action);
-
-    
-        $MakeConfig->addRoute("$nameControllerLower/$nameActionLower",$controller,$action);
-        $MakeConfig->routesSave();
-    }
+   
 
 
     public function config(array $args, string $type)

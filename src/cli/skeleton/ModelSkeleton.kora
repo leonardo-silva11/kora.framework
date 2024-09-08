@@ -7,7 +7,15 @@ class {{__nameModel}}Model
 
     public function {{__action}}()
     {
-        return ['My Data 1',1,'My Data 2'];
+        return ['languages' => [
+            ['id' => 7, 'name' => 'Assembly', 'year' => 1949],
+            ['id' => 6, 'name' => 'Cobol', 'year' => 1959],
+            ['id' => 1, 'name' => 'C', 'year' => 1972],
+            ['id' => 2, 'name' => 'C++', 'year' => 1983],
+            ['id' => 3, 'name' => 'PHP', 'year' => 1995],
+            ['id' => 5, 'name' => 'Java', 'year' => 1995],
+            ['id' => 4, 'name' => 'C#', 'year' => 2000],
+        ]];
     }
 }
 

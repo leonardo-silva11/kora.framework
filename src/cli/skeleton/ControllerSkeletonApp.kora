@@ -3,6 +3,7 @@ namespace app\{{__nameApp}}\controllers;
 
 use kora\bin\ControllerKora;
 use kora\bin\DefaultResponseKora;
+use app\{{__nameApp}}\intermediators\{{__nameController}}Intermediator;
 use app\{{__nameApp}}\models\{{__nameController}}Model;
 
 class {{__nameController}}Controller extends ControllerKora
@@ -20,9 +21,10 @@ class {{__nameController}}Controller extends ControllerKora
     {    
         try 
         {
-            $list = $this->{{__nameController}}Model->{{__action}}();
+                $list = $this->{{__nameController}}Model->{{__action}}();
 
-            return new DefaultResponseKora(\json_encode(['message' => 'list returned successful!','list' => $list]),200,['Content-Type' => 'application/json']);
+                return (new {{__nameController}}Intermediator())
+                ->view($list);   
         } 
         catch (\Throwable $th) 
         {

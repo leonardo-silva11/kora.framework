@@ -17,6 +17,8 @@ class MakeConfig extends CommandCli
     private DirectoryManager $dirConfig;
     private FileManager $appConfig;
 
+    public function exec(array $arg){}
+
     public function __construct(string $appName)
     {
         $pathProject = dirname(__DIR__,6);

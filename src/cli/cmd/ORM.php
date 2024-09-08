@@ -84,7 +84,8 @@ class ORM extends CommandCli
            $this->log->save($th->getMessage(),true);
         }   
     }*/
-
+    public function exec(array $arg){}
+    
     private function createDirectories()
     {
         if(!is_dir($this->paths['defaultDirectoryEntityPath']))

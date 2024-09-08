@@ -98,12 +98,29 @@ class IntermediatorResponseKora implements IMenssengerKora
        
     }
 
-    public function getReponse($key)
+    public function getResponse($key)
     {
-        return 
-        array_key_exists($key,$this->response) ? 
-        $this->response[$key] 
-        : throw new DefaultException("{$key} is not a valid key for reponse intermediator!",400);
+        $keysArray = explode('.',$key);
+        $k = $keysArray[0];
+        $search = array_key_exists($k, $this->response) ? 
+        $this->response[$k] : 
+        throw new DefaultException("{$k} is not a valid key for response intermediator, check the search query: {$key}!",400);
+      
+        for($i = 1; $i < count($keysArray); ++$i)
+        {
+            $k = $keysArray[$i];
+
+            if(array_key_exists($k,$search))
+            {
+                $search = $search[$k];
+            }
+            else
+            {
+                throw new DefaultException("{$k} is not a valid key for response intermediator, check the search query: {$key}!",400);
+            }
+        }
+
+        return $search;
     }
 
     public function getAll()

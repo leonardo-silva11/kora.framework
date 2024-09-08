@@ -13,12 +13,7 @@ class MakeModelCommand extends CommandCli
         parent::__construct($this, $path);
     }
 
-    public function exec()
-    {
-        $basePath = dirname(__DIR__, 1);
-        $baseFile = file_get_contents("$basePath/skeleton/ModelSkeleton.kora");
-        $this->createModel($baseFile);
-    }
+    public function exec(array $arg){}
 
     public function createModel(DirectoryManager $dir, $app, $Model, $action, bool $rewrite = false)
     {

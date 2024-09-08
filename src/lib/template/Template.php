@@ -8,6 +8,7 @@ class Template
     private array $config = [];
     private $dirSep = DIRECTORY_SEPARATOR;
     public TemplateReplace $replace; 
+    public TemplateRepeat $repeat; 
 
     public function __construct(array $config)
     {
@@ -32,6 +33,7 @@ class Template
         $this->joinPages();
     
         $this->replace = new TemplateReplace($this);
+        $this->repeat = new TemplateRepeat($this);
     }
 
 
@@ -112,9 +114,9 @@ class Template
         return $this->config;
     }
 
-    public function update(TemplateReplace $replace)
+    public function update($obj)
     {
-        $config = $replace->getConfig();
+        $config = $obj->getConfig();
         $this->config['pages'][$this->config['pageName']]['file'] = $config['file'];
     }
 

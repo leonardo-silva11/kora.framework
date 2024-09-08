@@ -13,12 +13,7 @@ class MakeControllerCommand extends CommandCli
         parent::__construct($this, $path);
     }
 
-    public function exec()
-    {
-        $basePath = dirname(__DIR__, 1);
-        $baseFile = file_get_contents("$basePath/skeleton/ControllerSkeleton.kora");
-        $this->createController($baseFile);
-    }
+    public function exec(array $arg){}
 
     public function createController(DirectoryManager $dir, $app, $controller, $action, bool $rewrite = false)
     {

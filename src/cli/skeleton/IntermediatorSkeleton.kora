@@ -1,0 +1,34 @@
+<?php
+namespace app\{{__nameApp}}\intermediators;
+
+use kora\bin\IntermediatorKora;
+use kora\bin\IntermediatorResponseKora;
+use kora\lib\template\Template;
+
+class {{__nameIntermediator}}Intermediator extends IntermediatorKora
+{
+
+    public function __construct(?string $action = null, int $code = 200)
+    { 
+        parent::__construct($this, $action, $code);
+     
+        return $this;
+    }
+
+    public function {{__action}}(IntermediatorResponseKora $response)
+    {
+        $config = $response->getResponse('config');
+        $template = new Template($config);
+        $template->replace->addAll($template->getConfig());
+        $template->replace->replace();
+
+        $languages = $response->getResponse('data.languages');
+
+        if(is_array($languages))
+        {
+            $template->repeat->exec('languages',$languages);
+        }
+
+        $template->show();
+    }
+}

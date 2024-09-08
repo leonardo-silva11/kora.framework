@@ -2,15 +2,6 @@
 <?php
 namespace kora\cli\cmd;
 
-use kora\lib\strings\Strings;
-use Symfony\Component\Console\Application;
-use Symfony\Component\Console\Input\ArrayInput;
-use Symfony\Component\Console\Output\ConsoleOutput;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Input\InputArgument;
-use Symfony\Component\Filesystem\Filesystem;
-
-
 class MakeRouteCommand extends CommandCli
 {
     public function __construct(string $path)
@@ -19,7 +10,7 @@ class MakeRouteCommand extends CommandCli
     }
 
 
-    public function exec()
+    public function exec(array $arg)
     {
         $routesApp = \json_decode(file_get_contents($this->paths['routeJsonFile']),true);
         $controller = OptionsCli::getOption('--c',$this->cmdArgs);
