@@ -15,7 +15,7 @@ class MakeControllerCommand extends CommandCli
 
     public function exec(array $arg){}
 
-    public function createController(DirectoryManager $dir, $app, $controller, $action, bool $rewrite = false)
+    public function createController(DirectoryManager $dir, $app, $controller, $action, bool $rewrite = false, $front = true)
     {
         $nameController = ucfirst($controller);
         $nameFullController = $nameController.'Controller';
@@ -33,7 +33,7 @@ class MakeControllerCommand extends CommandCli
             $MakeConfig = new MakeConfig($nameAppLower);
             $type = $MakeConfig->readSettingsByKey("apps.$app.defaultType");
 
-            if($type == 'app')
+            if($front)
             {
                 $base = file_get_contents("$basePath/skeleton/ControllerSkeletonApp.kora");
             }

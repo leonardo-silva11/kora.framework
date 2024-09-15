@@ -26,13 +26,15 @@ class OptionsCli
         {
             $opt1 = $option;
             $opt2 = $option;
+            $opt3 = $option;
 
             if(substr($option,0,2) == '--')
             {
                 $opt2 = '-'.substr($option,2,1);
+                $opt3 = '-'.substr($option,2,2);
             }
 
-            return explode('=',$value)[0] === $opt1 || explode('=',$value)[0] === $opt2;
+            return explode('=',$value)[0] === $opt1 || explode('=',$value)[0] === $opt2 || explode('=',$value)[0] === $opt3;
         });
 
         $val = null;
@@ -41,6 +43,13 @@ class OptionsCli
         {
             $exp = explode('=',end($result));
             $val = array_key_exists(1,$exp) ? $exp[1] : $exp[0];
+        }
+
+        if($val === "true" || $val === "false")
+        {
+            if (filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== null) {
+                return filter_var($val, FILTER_VALIDATE_BOOLEAN);
+            }
         }
 
         return $val;

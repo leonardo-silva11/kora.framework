@@ -118,7 +118,7 @@ abstract class CommandCli
         return $value;
     }
 
-    private function validateCommand($appKey, $appConn)
+   /* private function validateCommand($appKey, $appConn)
     {
         if($this->Command::class == 'kora\\cli\\cmd\\MakeControllerCommand')
         {
@@ -166,10 +166,28 @@ abstract class CommandCli
                 'routeJsonFile' => "{$this->paths['app']}{$this->app['lowerName']}{$this->directorySeparator}route.json",
             ];
         }
-    }
+    }*/
 
    
+    protected function validateCommand($cmd)
+    {
+        $cmd = mb_strtolower($cmd);
 
+        if($cmd == 'controller')
+        {
+            $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
+
+            if(empty($nameApp))
+            {
+                $this->log->save('create controller required name of app!',true);
+            }
+
+            dd($nameApp);
+            //$this->createControllerClass($dir, $nameAppN, $controller,$action,$front,$forceBuild);
+            dd($this->cmdArgs,$cmd);
+        }
+      
+    }
 
     public function config(array $args, string $type)
     {     

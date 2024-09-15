@@ -12,6 +12,7 @@ class DirectoryManager
     private string $storage = "phpDefaultStorageKora";
     private $currentStorage;
     private bool $readOnly = false;
+    private string $inMemory;
     private $defaultDrives = 
     [
         "C:\\",
@@ -99,7 +100,13 @@ class DirectoryManager
 
     public function createInMemory($path,$directory)
     {
-        return $this->normalizePath("$path/$directory");
+        $this->inMemory = $this->normalizePath("$path/$directory");
+        return $this->inMemory;
+    }
+
+    public function getInMemory()
+    {
+        return $this->inMemory;
     }
 
     private function _createByPath($path)
@@ -176,6 +183,16 @@ class DirectoryManager
         }
 
         return is_dir($this->normalizePath("{$this->getCurrentStorage()}{$this->getDirectorySeparator()}{$directoryName}"));
+    }
+
+    public function directoryExistsByFullPath(string $path) : bool
+    {
+        if(empty($path))
+        {
+            throw new DefaultException("path is null or empty!",403);
+        }
+
+        return is_dir($path);
     }
 
     public function newStorage(string $directory)

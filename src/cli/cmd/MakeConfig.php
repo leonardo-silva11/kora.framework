@@ -14,6 +14,7 @@ class MakeConfig extends CommandCli
     private string $project;
     private array $appSettings = [];
     private array $routes = [];
+    private string $currentRouteJson;
     private DirectoryManager $dirConfig;
     private FileManager $appConfig;
 
@@ -35,7 +36,7 @@ class MakeConfig extends CommandCli
     }
     
 
-    public function addRoute(string $alias, string $controller, string $action, bool $overwrite = false)
+    public function addRoute(string $alias, string $controller, string $action, string $verb = 'get', bool $overwrite = false)
     {
         $this->readRoutesFromJson();
 
@@ -43,6 +44,8 @@ class MakeConfig extends CommandCli
         {
             $this->routes['routes'] = [];
         }
+
+        $this->currentRouteJson = json_encode($this->routes['routes']);
 
         if(
             (   
@@ -54,10 +57,11 @@ class MakeConfig extends CommandCli
             $overwrite
         )
         {
+   
             $this->routes['routes'][$alias]['controller'] = $controller;
             $this->routes['routes'][$alias]['actions'][$action] = [
                 "verbs" =>  [
-                    "get" => []
+                    mb_strtolower($verb) => []
                 ],
                 "filters" =>
                 [
@@ -76,7 +80,7 @@ class MakeConfig extends CommandCli
 
     public function routesSave(bool $overwrite = false)
     {
-        if(!$this->appConfig->exists("$this->appName.json") || $overwrite)
+        if(!$this->appConfig->exists("$this->appName.json") || $overwrite || $this->currentRouteJson != $this->getRoutesJson())
         {
             $this->appConfig->save("$this->appName.json",$this->getRoutesJson());
             $this->log->save("$this->appName.json created!",false);

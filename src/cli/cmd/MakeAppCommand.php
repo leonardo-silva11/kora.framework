@@ -14,10 +14,10 @@ class MakeAppCommand  extends CommandCli
 
     }
 
-    public function createControllerClass(DirectoryManager $dirManager,$app, $controller, $action)
+    public function createControllerClass(DirectoryManager $dirManager,$app, $controller, $action, $front = true, $rewrite = false)
     {
         $MakeController = new MakeControllerCommand($this->paths['project']);
-        $MakeController->createController($dirManager, $app, $controller, $action);
+        $MakeController->createController($dirManager, $app, $controller, $action, $rewrite, $front);
     }
 
     public function createmodelClass(DirectoryManager $dirManager,$app, $model, $action)
@@ -69,11 +69,11 @@ class MakeAppCommand  extends CommandCli
         $this->log->showAllBag(false);
     }
 
-    public function exec(array $args)
+    public function exec(array $args, $cmd = 'app')
     {
         $this->cmdArgs = array_values($args);
-        $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
 
+        $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
 
         if(empty($nameApp))
         {
@@ -88,57 +88,73 @@ class MakeAppCommand  extends CommandCli
 
         $forceBuild = OptionsCli::getOption('--rewrite',$this->cmdArgs) ?? false;
         $controller = OptionsCli::getOption('--controller',$this->cmdArgs) ?? "Home";
-        $model = OptionsCli::getOption('--model',$this->cmdArgs) ?? "Home";
+        $model = OptionsCli::getOption('--model',$this->cmdArgs) ?? $controller;
         $front = OptionsCli::getOption('--front',$this->cmdArgs) ?? false;
         $defaultExtensionView = OptionsCli::getOption('--extension',$this->cmdArgs) ?? "html";
         $defaultTemplateView = OptionsCli::getOption('--template',$this->cmdArgs) ?? "$nameAppLower.v1.0";
         $clientId = OptionsCli::getOption('--id_client',$this->cmdArgs) ?? "";
         $clientSecret = OptionsCli::getOption('--secret_client',$this->cmdArgs) ?? "";
         $action = OptionsCli::getOption('--action',$this->cmdArgs) ?? "index";
-
+        $verb = OptionsCli::getOption('--verb',$this->cmdArgs) ?? "get";
         $nameControllerLower = strtolower($controller);
         $nameActionLower = strtolower($action);
-
+        $MakeConfig = new MakeConfig($nameAppLower);
+        
         $this->paths['app'] = $this->directoryManager->createInMemory($this->paths['project'],"app/$nameAppLower");
 
-        $dir = $this->directoryManager->createByPath($this->paths['app']);
-
-        $this->creatAppClass($dir,$nameAppN);
-        $MakeConfig = new MakeConfig($nameAppLower);
-        $MakeConfig->addSetting('defaultApp',$nameAppLower)
-                    ->addSetting('apps',[
-                        $nameAppN => [
-                            "defaultType" => $front ? "app" : "api",
-                            "defaultRoute" => "$nameControllerLower/$nameActionLower",
-                            "name" => $nameAppLower,
-                            "connectionStrings" => new \stdClass()
-                        ]
-                    ]);
-
-        if($front)
+        if($cmd == 'controller' && $this->directoryManager->directoryExistsByFullPath($this->paths['app']))
         {
-            $MakeConfig->addSetting("apps.$nameAppN.views",[
-                "defaultPageExtension" => $defaultExtensionView,
-                "defaultTemplate" => $defaultTemplateView,
-                "templates" => [$defaultTemplateView]
-            ]);
+            $generateModel = OptionsCli::getOption('--model',$this->cmdArgs) ?? true;
+       
+            $dir = $this->directoryManager->createByPath($this->paths['app']);
+ 
+            $this->createControllerClass($dir, $nameAppN, $controller, $action, $front, $forceBuild);
 
-            $this->createIntermediatorClass($dir, $nameAppN, $nameControllerLower,$action);
-            $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
+            if($generateModel)
+            {
+                $this->createModelClass($dir, $nameAppN, $controller, $action);
+            }
         }
-
-        $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
-            "clientId" => $clientId,
-            "clientSecret" => $clientSecret,
-        ]);
-
-        $MakeConfig->settingsSave();
-
-        $this->createControllerClass($dir, $nameAppN, $controller,$action);
-        $this->createModelClass($dir, $nameAppN, $model,$action);
-
+        else if($cmd == 'app')
+        {
+            $dir = $this->directoryManager->createByPath($this->paths['app']);
     
-        $MakeConfig->addRoute("$nameControllerLower/$nameActionLower",$controller,$action);
+            $this->creatAppClass($dir,$nameAppN);
+
+            $MakeConfig->addSetting('defaultApp',$nameAppLower)
+                        ->addSetting('apps',[
+                            $nameAppN => [
+                                "defaultType" => $front ? "app" : "api",
+                                "defaultRoute" => "$nameControllerLower/$nameActionLower",
+                                "name" => $nameAppLower,
+                                "connectionStrings" => new \stdClass()
+                            ]
+                        ]);
+                  
+            if($front)
+            {
+                $MakeConfig->addSetting("apps.$nameAppN.views",[
+                    "defaultPageExtension" => $defaultExtensionView,
+                    "defaultTemplate" => $defaultTemplateView,
+                    "templates" => [$defaultTemplateView]
+                ]);
+    
+                $this->createIntermediatorClass($dir, $nameAppN, $nameControllerLower,$action);
+                $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
+            }
+          
+            $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
+                "clientId" => $clientId,
+                "clientSecret" => $clientSecret,
+            ]);
+    
+            $MakeConfig->settingsSave();
+         
+            $this->createControllerClass($dir, $nameAppN, $controller,$action,$front,$forceBuild);
+            $this->createModelClass($dir, $nameAppN, $model,$action);
+        }
+  
+        $MakeConfig->addRoute("$nameControllerLower/$nameActionLower",$controller,$action,$verb);
         $MakeConfig->routesSave();
     }
 }
