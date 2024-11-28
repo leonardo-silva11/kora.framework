@@ -148,35 +148,38 @@ class RouterKora
         (new RequestKora($config));
         $this->callController(
             $config,
-            (new FilterKora($config))
+            (new MiddlewareKora($config))
         ); 
     }
 
-    private function callController(array $config,FilterKora $FilterKora)
+    private function callController(array $config,MiddlewareKora $MiddlewareKora)
     {
-        $this->app->extraConfig();
+        $this->app->execBeforeAction();
 
         $serviceContainer  = new DependencyManagerKora($config);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
         $this->app->block();
 
-        $controllerClass = $this->app->getParamConfig('http.controller.namespace');
-        $controller = new $controllerClass(...$constructorDependencies);
-
+        //inject parameters in super class
         $refMethod = new ReflectionMethod(ControllerKora::class, 'start');
         $refMethod->setAccessible(true);
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
 
+        $controllerClass = $this->app->getParamConfig('http.controller.namespace');
+        $controller = new $controllerClass(...$constructorDependencies);
+
+
+     
 
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
-        $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$FilterKora,$controller]);
+        $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$MiddlewareKora,$controller]);
         $m1->setAccessible(false);
-
+     
         if($response instanceof BagKora)
-        {
+        {       
             $this->app->addInjectable($response->getName(),$response);
           
             $parameters = $serviceContainer->filterRouteParameters($controller);
@@ -190,6 +193,8 @@ class RouterKora
         {
             throw new DefaultException(sprintf('Response must be an instance of %s!',IMenssengerKora::class),500);
         }
+        
+        $this->app->execAfterAction();
 
         $response->send();
     }

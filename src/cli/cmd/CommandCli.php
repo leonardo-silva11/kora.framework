@@ -28,6 +28,17 @@ abstract class CommandCli
         $this->log = new Log($this->directoryManager->cloneStorage());
     }
 
+    protected function normalizeNomenclature(string $str)
+    {
+        $strArray = explode('-',$str);
+        $strArray = count($strArray) < 2 ? explode('_',$str) : $strArray;
+        $strArrayN = array_map('ucfirst', $strArray);
+        $strN = implode('',$strArrayN);
+        $strLower = strtolower($strN);
+
+        return [ 'lower' => $strLower, 'normalized' => $strN];
+    }
+
     private function appConfig(int $appKey)
     {
         $appKey -= 1;
@@ -196,7 +207,6 @@ abstract class CommandCli
             $type = ucfirst($type);
 
             $this->cmdArgs = array_values($args);
-
 
             $this->paths['app'] = "{$this->paths['project']}{$this->directorySeparator}app{$this->directorySeparator}";
 

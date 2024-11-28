@@ -220,6 +220,19 @@ class DependencyManagerKora
         }
     }
 
+    private function resolveRouteFixedParameters(Array &$resolved,string $nameMethod)
+    {
+        $params = $this->extract($this->services[$nameMethod],'fixedParams');
+
+        $keys = \array_keys($params);
+        foreach($keys as $k)
+        {
+            $resolved[$k] = $params[$k];
+        }
+       
+        return $params;
+    }
+
     private function prepareDependencies($resolvedDependencies)
     {
         $dependencies = [];
@@ -268,15 +281,14 @@ class DependencyManagerKora
 
     private function resolveInstance(string $type, string $filterClass, string $method, array &$resolved)
     {
-        $filters = $this->app->getParamConfig("http.filters.{$type}",'protected',false);
-
+        $middlewares = $this->app->getParamConfig("http.middlewares.{$type}",'protected',false);
 
 
         $filter = array_map(function($item) use ($filterClass) 
         {
 
             return $item['class'] == $filterClass ? $item['methods'] : [];
-        }, $filters);
+        }, $middlewares);
 
         if
             (
@@ -290,7 +302,7 @@ class DependencyManagerKora
             )
         {
 
-    
+   
             if(Collections::arrayKeyExistsInsensitive($method,$this->services))
             {
                 $resolved[$type][$method] = [];
@@ -298,15 +310,16 @@ class DependencyManagerKora
                 $this->resolveCretedInstances($resolved[$type][$method], $method);
                 $this->resolvedNullInstances($resolved[$type][$method]);
                 $this->resolveParameters($resolved[$type][$method], $method);
+                $this->resolveRouteFixedParameters($resolved[$type][$method], $method);
                 $resolved[$type][$method] = $this->prepareDependencies($resolved[$type][$method]);  
             }
 
         }
-
+   
         return $resolved;
     } 
 
-    public function resolveSingleFiltersDependencies(string $type, string $filterClass, string $method) : array
+    public function resolveSingleMiddlewareDependencies(string $type, string $filterClass, string $method) : array
     {
         $resolved = [
             'before' => [],
@@ -324,7 +337,7 @@ class DependencyManagerKora
         return $resolved;
     }
 
-    public function resolveFiltersDependencies(string $type) : array
+    public function resolveMiddlewareDependencies(string $type) : array
     {
         $resolved = [
             'before' => [],
@@ -333,12 +346,12 @@ class DependencyManagerKora
 
         if(!in_array($type,['before','after']))
         {
-            throw new DefaultException("allowed type filters are: (before) and (after)!",400);
+            throw new DefaultException("allowed type middlewares are: (before) and (after)!",400);
         }
 
-        $filters = $this->app->getParamConfig("config.http.filters.{$type}",'public',false);
+        $middlewares = $this->app->getParamConfig("config.http.middlewares.{$type}",'public',false);
 
-        foreach($filters as $filter)
+        foreach($middlewares as $filter)
         { 
             for($i = 0; $i < count($filter['methods']); ++$i)
             {

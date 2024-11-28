@@ -111,7 +111,7 @@ class RequestKora
     {
         $configAction = $this->app->getParamConfig('http.route.actions');
         $action = key($configAction);
-        $filters = Collections::arrayKeyExistsInsensitive('filters',$configAction[$action]) ? $configAction[$action]['filters'] : [];
+        $middlewares = Collections::arrayKeyExistsInsensitive('middlewares',$configAction[$action]) ? $configAction[$action]['middlewares'] : [];
         $controller = $this->app->getParamConfig('http.controller.namespace');
         $ignoreParameters = Collections::arrayKeyExistsInsensitive('ignoreParameters',$configAction[$action])
                             ?
@@ -126,7 +126,7 @@ class RequestKora
 
         $this->app->setParamConfig('http.action',[
             'name' => $action,
-            'filters' => $filters,
+            'middlewares' => $middlewares,
             'controller' => $controller,
             'ignoreParameters' =>  $ignoreParameters
         ],'protected');

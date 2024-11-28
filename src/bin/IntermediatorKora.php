@@ -9,7 +9,7 @@ abstract class IntermediatorKora
 {    
     private static AppKora $app;
     private static DependencyManagerKora $serviceContainer;
-    private static FilterKora $filterKora;
+    private static MiddlewareKora $middlewareKora;
     private static ControllerKora $controller;
     private IntermediatorKora $intermediator;
     private array $bagConfig = [];
@@ -162,12 +162,12 @@ abstract class IntermediatorKora
         (
             AppKora $app, 
             DependencyManagerKora $serviceContainer, 
-            FilterKora $filterKora,
+            MiddlewareKora $middlewareKora,
             ControllerKora $controller
         ) : BagKora|IntermediatorResponseKora
     {
         self::$app = $app;
-        self::$filterKora = $filterKora;
+        self::$middlewareKora = $middlewareKora;
         self::$serviceContainer = $serviceContainer;
         self::$controller = $controller;
 
@@ -176,31 +176,32 @@ abstract class IntermediatorKora
 
     private static function callFilter(string $key) : BagKora|IntermediatorResponseKora
     {
-        $filters = self::$app->getParamConfig('http.filters');
+        $middlewares = self::$app->getParamConfig('http.middlewares');
         $keyBag = ucfirst($key);
-        $nameBag = "filters{$keyBag}";
+        $nameBag = "middlewares{$keyBag}";
         $bag = new BagKora($nameBag);
 
-        if(array_key_exists($key,$filters))
+        if(array_key_exists($key,$middlewares))
         {
-            foreach($filters[$key] as $filter)
+            foreach($middlewares[$key] as $filter)
             {
+
                 $class = $filter['class'];
 
                 $methods = $filter['methods'];
-             
+           
                 for($i = 0; $i < count($methods); ++$i)
                 {
                     $method = $methods[$i];
-                
-                    $services = self::$serviceContainer->resolveSingleFiltersDependencies($key,$class,$method);
+         
+                    $services = self::$serviceContainer->resolveSingleMiddlewareDependencies($key,$class,$method);
         
-                    $response = self::$filterKora->callSingleFilter(self::$controller,$filter,$methods[$i],$services,$key);
+                    $response = self::$middlewareKora->callSingleMiddleware(self::$controller,$filter,$method,$services,$key);
 
-                    $data = $response->getResponse($methods[$i]);
+                    $data = $response->getResponse($method);
                     self::$app->addInjectable($response->getName(),$response);
                     $bag->add($response->getName(),$response);
-     
+           
                     if(gettype($data) == 'object' && ($data instanceof IntermediatorResponseKora || $data instanceof Response))
                     {
                        return $data;

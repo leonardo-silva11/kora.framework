@@ -74,12 +74,12 @@ class MakeAppCommand  extends CommandCli
         $this->cmdArgs = array_values($args);
 
         $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
-
+     
         if(empty($nameApp))
         {
             $this->log->save('name of app not found!',true);
         }
-
+      
         $nameAppArray = explode('-',$nameApp);
         $nameAppArray = count($nameAppArray) < 2 ? explode('_',$nameApp) : $nameAppArray;
         $nameAppArrayN = array_map('ucfirst', $nameAppArray);
@@ -101,11 +101,11 @@ class MakeAppCommand  extends CommandCli
         $MakeConfig = new MakeConfig($nameAppLower);
         
         $this->paths['app'] = $this->directoryManager->createInMemory($this->paths['project'],"app/$nameAppLower");
-
+    
         if($cmd == 'controller' && $this->directoryManager->directoryExistsByFullPath($this->paths['app']))
         {
             $generateModel = OptionsCli::getOption('--model',$this->cmdArgs) ?? true;
-       
+
             $dir = $this->directoryManager->createByPath($this->paths['app']);
  
             $this->createControllerClass($dir, $nameAppN, $controller, $action, $front, $forceBuild);

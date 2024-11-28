@@ -34,9 +34,12 @@ abstract class AppKora
                 ]
             ]
         ];
+
+       // dd($this->app);
     }
 
-    public abstract function extraConfig() : void;
+    public abstract function execBeforeAction() : void;
+    public abstract function execAfterAction() : void;
 
     public function injectables(): array
     {
@@ -79,7 +82,7 @@ abstract class AppKora
         $jsonFile = file_get_contents($pathRoutes);
         $routes = @json_decode($jsonFile,true);
 
-        if(!array_key_exists('routes',$routes) || empty($routes['routes']))
+        if(empty($routes) || !array_key_exists('routes',$routes) || empty($routes['routes']))
         {
             throw new DefaultException("App {{$config['app']['name']}} does not contain route definitions in the file:
                                      {{$config['app']['name']}.json}}!",500);
@@ -188,7 +191,11 @@ abstract class AppKora
 
     public function getParamConfig(string $key,string $source = 'protected',bool $throwExcpt = true)
     {
-
+        if($key == "appSettings.apps.eempregosapi.tools.rabbitMQ.connection")
+        {
+            dd($this->app['protected']);
+            dd('vamos resolver?');
+        }
         if($source != 'protected' && $source != 'public')
         {
             throw new DefaultException("{{$key}} is invalid to access parameter config, allowed sources are: {public} or {protected}!",404);
