@@ -28,13 +28,13 @@ abstract class CommandCli
         $this->log = new Log($this->directoryManager->cloneStorage());
     }
 
-    protected function normalizeNomenclature(string $str)
+    protected function normalizeNomenclature(string $str, bool $underline = false)
     {
         $strArray = explode('-',$str);
         $strArray = count($strArray) < 2 ? explode('_',$str) : $strArray;
         $strArrayN = array_map('ucfirst', $strArray);
         $strN = implode('',$strArrayN);
-        $strLower = strtolower($strN);
+        $strLower = !$underline ? strtolower($strN) : strtolower($str);
 
         return [ 'lower' => $strLower, 'normalized' => $strN];
     }

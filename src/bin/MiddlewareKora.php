@@ -84,6 +84,9 @@ class MiddlewareKora
             throw new DefaultException(sprintf("Controller {%s} does not contains definition for {%s} Middleware!",$instance::class,$Middleware['class']),404);
         }
 
+
+        $responseMiddleware = [];
+
         if(in_array($method,$Middleware['methods']))
         {
             $params = [];
@@ -98,9 +101,8 @@ class MiddlewareKora
 
             try 
             {
-
                  $resp = $instance->$method(...$params);
-          
+
                  $responseMiddleware[$method] = $resp;
             } 
             catch (\Throwable $th) 

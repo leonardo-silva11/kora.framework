@@ -19,6 +19,7 @@ class MakeEntityCommand extends CommandCli
         $this->cmdArgs = array_values($args);
 
         $entityNameArg = OptionsCli::getArg(0,$this->cmdArgs);
+        $underline = OptionsCli::getOption('--underline',$this->cmdArgs) ?? false;
 
 
         if(empty($entityNameArg))
@@ -26,7 +27,7 @@ class MakeEntityCommand extends CommandCli
             $this->log->save('name of entity not found!',true);
         }
 
-        $normalizedEntityName =  $this->normalizeNomenclature($entityNameArg);
+        $normalizedEntityName =  $this->normalizeNomenclature($entityNameArg,$underline);
 
         $this->app = OptionsCli::getOption('--app',$this->cmdArgs);
         $rewrite = OptionsCli::getOption('--rewrite',$this->cmdArgs) ?? false;

@@ -12,9 +12,9 @@ class {{__nameController}}Controller extends ControllerKora
 
     public function __construct()
     {
-        $this->{{__nameController}}Model = new {{__nameController}}Model();
-
         parent::__construct();
+
+        $this->{{__nameController}}Model = new {{__nameController}}Model();
     }
 
     public function {{__action}}()

@@ -2,6 +2,8 @@
 <?php
 namespace kora\cli\cmd;
 
+use stdClass;
+
 class MakeRouteCommand extends CommandCli
 {
     public function __construct(string $path)
@@ -29,8 +31,8 @@ class MakeRouteCommand extends CommandCli
             ],
             'filters' => 
             [
-                'before' => [],
-                'after' => []
+                'before' => new stdClass(),
+                'after' => new stdClass()
             ]
 
         ];
