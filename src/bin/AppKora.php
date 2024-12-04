@@ -15,7 +15,7 @@ abstract class AppKora
     {
         $config['app']['instance'] = $app;
         $config['app']['routes'] = $this->getRoutes($config);
-
+       
         $this->app = 
         [
             'updated' => false,
@@ -28,14 +28,15 @@ abstract class AppKora
                 'http' => $config['http'],
                 'appSettings' => $config['appSettings'],
                 'storage' => $config['storage'],
+                'info' => [
+                    'nameOfproject' =>  $config['nameOfProject'],
+                ],
                 'paths' => 
                 [
                     'pathOfProject' => $config['pathOfProject']
                 ]
             ]
         ];
-
-       // dd($this->app);
     }
 
     public abstract function execBeforeAction() : void;
@@ -191,11 +192,6 @@ abstract class AppKora
 
     public function getParamConfig(string $key,string $source = 'protected',bool $throwExcpt = true)
     {
-        if($key == "appSettings.apps.eempregosapi.tools.rabbitMQ.connection")
-        {
-            dd($this->app['protected']);
-            dd('vamos resolver?');
-        }
         if($source != 'protected' && $source != 'public')
         {
             throw new DefaultException("{{$key}} is invalid to access parameter config, allowed sources are: {public} or {protected}!",404);

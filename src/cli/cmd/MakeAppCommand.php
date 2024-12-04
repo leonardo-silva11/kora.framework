@@ -69,6 +69,39 @@ class MakeAppCommand  extends CommandCli
         $this->log->showAllBag(false);
     }
 
+    private function createFront
+    (
+        $MakeConfig, 
+        $nameAppN,
+        $front = false
+    )
+    {
+        if($front)
+        {
+            $nameAppLower = strtolower($nameAppN);
+            $defaultExtensionView = OptionsCli::getOption('--extension',$this->cmdArgs) ?? "html";
+            $defaultTemplateView = OptionsCli::getOption('--template',$this->cmdArgs) ?? "$nameAppLower.v1.0";
+            
+            $MakeConfig->addSetting("apps.$nameAppN.views",[
+                "defaultPageExtension" => $defaultExtensionView,
+                "defaultTemplate" => $defaultTemplateView,
+                "templates" => [$defaultTemplateView]
+            ]);
+
+            $dir = $this->directoryManager->createByPath($this->paths['app']);
+            $controller = OptionsCli::getOption('--controller',$this->cmdArgs) ?? "Home";
+            $nameControllerLower = strtolower($controller);
+            $nameApp = OptionsCli::getArg(0,$this->cmdArgs);
+            $action = OptionsCli::getOption('--action',$this->cmdArgs) ?? "index";
+
+            if(!empty($nameApp))
+            {
+                $this->createIntermediatorClass($dir, $nameAppN, $nameControllerLower,$action);
+                $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
+            }
+        }
+    }
+
     public function exec(array $args, $cmd = 'app')
     {
         $this->cmdArgs = array_values($args);
@@ -107,13 +140,15 @@ class MakeAppCommand  extends CommandCli
             $generateModel = OptionsCli::getOption('--model',$this->cmdArgs) ?? true;
 
             $dir = $this->directoryManager->createByPath($this->paths['app']);
- 
+
             $this->createControllerClass($dir, $nameAppN, $controller, $action, $front, $forceBuild);
 
             if($generateModel)
             {
                 $this->createModelClass($dir, $nameAppN, $controller, $action);
             }
+
+            $this->createFront($MakeConfig,$nameAppN,$front);
         }
         else if($cmd == 'app')
         {
@@ -130,8 +165,9 @@ class MakeAppCommand  extends CommandCli
                                 "connectionStrings" => new \stdClass()
                             ]
                         ]);
-                  
-            if($front)
+              
+            $this->createFront($MakeConfig,$nameAppN,$front);
+            /*if($front)
             {
                 $MakeConfig->addSetting("apps.$nameAppN.views",[
                     "defaultPageExtension" => $defaultExtensionView,
@@ -141,7 +177,7 @@ class MakeAppCommand  extends CommandCli
     
                 $this->createIntermediatorClass($dir, $nameAppN, $nameControllerLower,$action);
                 $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
-            }
+            }*/
           
             $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
                 "clientId" => $clientId,

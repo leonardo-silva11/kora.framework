@@ -86,6 +86,7 @@ class RouterKora
         $config['appSettings']['defaultApp'] = mb_strtolower($firstApp);
     }
 
+
     private function newInstanceApp(array &$config): void
     {
         $requestUri = $config['http']['requestUri'];
@@ -97,18 +98,32 @@ class RouterKora
         }
 
         $app = mb_strtolower($requestUriCollection[0]);
- 
+
         $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
         $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
         $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
-
+ 
         if(empty($appConfig))
         {
             throw new DefaultException("app config in {appsettings.json} it's misconfigured or does not exist!",500);
         }
 
-        $config['app']['class'] = $appConfig['key'];
+        $config['app']['class'] = $appConfig['key'] ?? $config['appSettings']['defaultApp'];
         $config['app']['config'] = $appConfig;
+
+        if(empty($appConfig['key']))
+        {
+               foreach($config['appSettings']['apps'] as $nameApp => $appObj)
+               {
+                    if($appObj['name'] == $config['appSettings']['defaultApp'])
+                    {
+                        $config['app']['class'] = $nameApp;
+                        $config['app']['config'] = $appConfig;
+                        $config['app']['name'] = $appObj['name'];
+                        break;
+                    }
+               } 
+        }
 
         $Class = "app\\{$config['app']['name']}\\{$config['app']['class']}";
             //colocar validações de chaves app.name e app.class
@@ -125,6 +140,7 @@ class RouterKora
         $config['app']['path'] = dirname($path);
         $config['app']['pathClass'] = $path;
         $config['app']['fullName'] = $Class;
+ 
         $this->app = new $Class($config);
     }
 
@@ -169,15 +185,12 @@ class RouterKora
         $controllerClass = $this->app->getParamConfig('http.controller.namespace');
         $controller = new $controllerClass(...$constructorDependencies);
 
-
-     
-
         $reflection = new ReflectionClass(IntermediatorKora::class);
         $m1 = $reflection->getMethod('start');
         $m1->setAccessible(true);
         $response = $m1->invokeArgs(null, [$this->app, $serviceContainer,$MiddlewareKora,$controller]);
         $m1->setAccessible(false);
-     
+
         if($response instanceof BagKora)
         {       
             $this->app->addInjectable($response->getName(),$response);

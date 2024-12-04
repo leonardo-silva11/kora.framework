@@ -20,6 +20,7 @@ abstract class IntermediatorKora
     {
         $this->intermediator = $intermediator; 
         $this->action = $action;
+     
         $this->setCode($code);
 
         if (!($intermediator instanceof IntermediatorKora)) 

@@ -58,13 +58,15 @@ class RequestKora
         }
 
         $requestUri = $this->app->getParamConfig('http.requestUri');
-
         $requestUri = $routeDefault != $requestUri ? str_ireplace(["/$nameOfApp",$nameOfApp],Strings::empty,$requestUri) : $requestUri;
         $requestUri = substr($requestUri,0,1) === '/' &&  mb_strlen($requestUri) > 1 ? substr($requestUri,1) : $requestUri;
         $requestUri = explode('?',$requestUri)[0];
+        $requestUriCount = substr_count($requestUri,'/');
+        //action default for controllers
+        $requestUri = $requestUriCount > 0 ? $requestUri : "$requestUri/index";
 
         $routeKey = Collections::arrayKeyExistsInsensitive($requestUri,$routes) ? $requestUri : $routeDefault;
-      
+
         if(!Collections::arrayKeyExistsInsensitive($routeKey,$routes))
         {
             throw new DefaultException("route {{$requestUri}} not found!",404,
@@ -171,6 +173,7 @@ class RequestKora
     private function _configUrl()
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
+        $nameOfproject = $this->app->getParamConfig('info.nameOfproject');
         $action = $this->app->getParamConfig('http.action.name');
         $baseUrl = "{$this->Request->getSchemeAndHttpHost()}{$this->Request->getBaseUrl()}";
 
@@ -195,7 +198,6 @@ class RequestKora
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
         $pathOfProject = $this->app->getParamConfig('paths.pathOfProject');
-
         $dirSep = DIRECTORY_SEPARATOR;
         $this->app->setParamConfig('paths.app',"{$pathOfProject}{$dirSep}app{$dirSep}{$nameOfApp}",'protected');
         $this->app->setParamConfig('paths.views',"{$pathOfProject}{$dirSep}app{$dirSep}{$nameOfApp}{$dirSep}views",'protected');
