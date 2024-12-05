@@ -77,8 +77,7 @@ class MakeMiddlewareCommand extends CommandCli
 
             if($file->save("$nameFullMiddleware.php",$fileClass))
             {
-                $fullName = $normalizedMiddlewareName['normalized'];
-                $constructor = "{$fullName}Constructor";
+                $constructor = "{$nameFullMiddleware}Constructor";
                 $MakeConfig = new MakeConfig($normalizedAppName['lower']);
                 $MakeConfig->addMiddleware($aliasRoute,$order,$nameFullMiddleware,[$constructor,$nameMethod],$rewrite);
                 $MakeConfig->routesSave();
