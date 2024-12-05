@@ -137,7 +137,7 @@ class MakeAppCommand  extends CommandCli
     
         if($cmd == 'controller' && $this->directoryManager->directoryExistsByFullPath($this->paths['app']))
         {
-            $generateModel = OptionsCli::getOption('--model',$this->cmdArgs) ?? true;
+            $generateModel = OptionsCli::getOption('--model',$this->cmdArgs) ?? false;
 
             $dir = $this->directoryManager->createByPath($this->paths['app']);
 
@@ -167,17 +167,6 @@ class MakeAppCommand  extends CommandCli
                         ]);
               
             $this->createFront($MakeConfig,$nameAppN,$front);
-            /*if($front)
-            {
-                $MakeConfig->addSetting("apps.$nameAppN.views",[
-                    "defaultPageExtension" => $defaultExtensionView,
-                    "defaultTemplate" => $defaultTemplateView,
-                    "templates" => [$defaultTemplateView]
-                ]);
-    
-                $this->createIntermediatorClass($dir, $nameAppN, $nameControllerLower,$action);
-                $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
-            }*/
           
             $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
                 "clientId" => $clientId,

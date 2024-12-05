@@ -5,6 +5,7 @@ namespace kora\cli\cmd;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\storage\DirectoryManager;
 use kora\lib\storage\FileManager;
+use stdClass;
 
 class MakeConfig extends CommandCli
 {
@@ -63,7 +64,7 @@ class MakeConfig extends CommandCli
                 "verbs" =>  [
                     mb_strtolower($verb) => []
                 ],
-                "filters" =>
+                "middlewares" =>
                 [
                     "after" =>
                     [
@@ -76,6 +77,46 @@ class MakeConfig extends CommandCli
                 ]
             ];
         }
+    }
+
+
+    public function addMiddleware(string $alias, string $typeOrder, string $nameMiddleware, array $methods, bool $overwrite = false)
+    {
+        $this->readRoutesFromJson();
+
+        if(!array_key_exists('routes',$this->routes))
+        {
+            $this->log->save("$this->appName.json alredy exists!",true);
+        }
+
+        $this->currentRouteJson = json_encode($this->routes['routes']);
+
+        if(!array_key_exists($alias,$this->routes['routes']))
+        {
+            $this->log->save("The $alias not found in routes!",true);
+        }
+
+        $route = $this->routes['routes'][$alias];
+
+        if(!array_key_exists('middlewares',$route['actions']))
+        {
+            $keys = array_keys($route['actions']);
+            $route['actions'][$keys[0]]['middlewares'] = [];
+            $route['actions'][$keys[0]]['middlewares']['after'] = [];
+            $route['actions'][$keys[0]]['middlewares']['before'] = [];
+          
+        }
+
+        if(!empty($route['actions'][$keys[0]]['middlewares'][$typeOrder][$nameMiddleware]['methods']))
+        {
+            array_push($route['actions'][$keys[0]]['middlewares'][$typeOrder][$nameMiddleware]['methods'],$methods[1]); 
+        }
+        else
+        {
+            $route['actions'][$keys[0]]['middlewares'][$typeOrder][$nameMiddleware]['methods'] = $methods;
+        }
+        
+        $this->routes['routes'][$alias] = $route;
     }
 
     public function routesSave(bool $overwrite = false)

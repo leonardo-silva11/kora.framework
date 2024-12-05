@@ -47,7 +47,9 @@ class MiddlewareKora
 
                     foreach($f2['methods'] as $mtd)
                     {
-                        if(!method_exists($namespace,$mtd))
+                        $constructor = "{$className}Constructor";
+                        
+                        if(!method_exists($namespace,$mtd) && $constructor != $mtd)
                         {
                             throw new DefaultException("Middleware {$className}/{$mtd} not found!",404);
                         }
@@ -91,9 +93,11 @@ class MiddlewareKora
         {
             $params = [];
     
-            if(Collections::arrayKeyExistsInsensitive($type,$services)
+            if
+            (
+                Collections::arrayKeyExistsInsensitive($type,$services)
                 &&
-            Collections::arrayKeyExistsInsensitive($method,$services[$type])
+                Collections::arrayKeyExistsInsensitive($method,$services[$type])
             )
             {
                 $params = $services[$type][$method];
