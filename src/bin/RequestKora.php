@@ -139,10 +139,6 @@ class RequestKora
                     $obj->validate();
                     $p = $obj;
                 }
-                else if($reflection->getType() && $reflection->getType()->getName() === 'array')
-                {
-                    dd($objKey,$data,$p);
-                }
          
                 $reflection->setValue($result[$cKey][$bNormalize],$p);
             }               
