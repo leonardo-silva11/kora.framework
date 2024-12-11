@@ -4,7 +4,10 @@ namespace kora\bin;
 use kora\lib\collections\Collections;
 use Symfony\Component\HttpFoundation\Request;
 use kora\lib\exceptions\DefaultException;
+use kora\lib\exceptions\InputException;
 use kora\lib\strings\Strings;
+use ReflectionProperty;
+use stdClass;
 
 class RequestKora
 {
@@ -82,31 +85,146 @@ class RequestKora
         return $this;
     }
 
+    private function  paramsSet(string $cKey, string $key, $data, &$result)
+    {
+        $nameOfApp = $this->app->getParamConfig('app.name');
+        $bNormalize = implode('',array_map('ucfirst', explode('_',$key)));
+        $baseName = "{$bNormalize}Input";
+        $namespace = "app\\$nameOfApp\\inputs\\$baseName";
+
+        if(class_exists($namespace))
+        {
+            $result[$cKey]['inputs'][$bNormalize] = new $namespace();
+ 
+            foreach($data as $k => $p)
+            {
+                $pascalCaseProperty = implode('',array_map('ucfirst', explode('_',$k)));
+                $pascalCasePropertyClass = "{$pascalCaseProperty}Input";
+                if
+                (
+                    !property_exists($result[$cKey]['inputs'][$bNormalize],$k)
+                    &&
+                    !property_exists($result[$cKey]['inputs'][$bNormalize],$pascalCaseProperty)
+                    &&
+                    !property_exists($result[$cKey]['inputs'][$bNormalize],$pascalCasePropertyClass)
+                )
+                {
+                    throw new InputException("The parameter {$k} is not allowed in request, not found property in {$baseName}!");
+                }
+
+                $objKey = property_exists($result[$cKey]['inputs'][$bNormalize],$k) 
+                ? $k 
+                : (property_exists($result[$cKey]['inputs'][$bNormalize],$pascalCaseProperty) ? $pascalCaseProperty : $pascalCasePropertyClass);
+
+                $reflection = new ReflectionProperty($result[$cKey]['inputs'][$bNormalize],$objKey);
+                $reflection->setAccessible(true);
+
+                if($reflection->getType() && !$reflection->getType()->isBuiltin())
+                {
+                    $class = $reflection->getType()->getName();
+                    $obj = new $class();
+                    foreach($p as $keyAttr => $valueAttr)
+                    {
+                        if(!property_exists($obj,$keyAttr))
+                        {
+                            $typeOfClass = $obj::class;
+                            throw new InputException("The parameter {$keyAttr} is not allowed in request, not found property in {$typeOfClass}!");
+                        }
+                        $ref = new ReflectionProperty($obj,$keyAttr);
+                        $ref->setAccessible(true);
+                        $ref->setValue($obj,$valueAttr);
+                    }
+                 
+                    $obj->validate();
+                    $p = $obj;
+                }
+         
+                $reflection->setValue($result[$cKey]['inputs'][$bNormalize],$p);
+            }               
+        }
+        else
+        {
+            $result[$cKey]['regular'][$key] = $data;
+        }
+    }
+
+    private function requestInputClass($queryParameters,$formParameters)
+    {
+        $result = [
+            'formParameters' => [
+                "regular" => [],
+                "inputs" => [],
+            ],
+            'queryParameters' => [
+                "regular" => [],
+                "inputs" => [],
+            ],
+        ];
+
+        foreach($formParameters as $key => $param)
+        {
+            $this->paramsSet('formParameters',$key, $param, $result);
+        }
+
+        foreach($queryParameters as $key => $param)
+        {
+            $this->paramsSet('queryParameters',$key,$param,$result);
+        }
+
+        return $result;
+    }
+
+
+
     private function paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters)
     {
         $ignoreParameters = $this->app->getParamConfig('http.action.ignoreParameters');
 
+        $requestInput = [];
+
         if(!$ignoreParameters)
         {
-            foreach($queryParameters as $k => $p)
+            $requestInput = $this->requestInputClass($queryParameters,$formParameters);
+
+            foreach($requestInput['queryParameters']['inputs'] as $obj)
             {
-                $this->paramsRequestValidateAll($httpMethod,$params,$k);
-                
+                $obj->validate();
             }
-          
-            foreach($formParameters as $k => $p)
+
+            foreach($requestInput['formParameters']['inputs'] as $obj)
+            {
+                $obj->validate();
+            }
+
+            foreach($requestInput['queryParameters']['regular'] as $k => $p)
             {
                 $this->paramsRequestValidateAll($httpMethod,$params,$k);
             }
     
+            foreach($requestInput['formParameters']['regular'] as $k => $p)
+            {
+                $this->paramsRequestValidateAll($httpMethod,$params,$k);
+            }
+         
             foreach($params['required'] as $p)
             {
-                if(!array_key_exists($p,$queryParameters) && !array_key_exists($p,$formParameters))
+                if
+                (
+                    !array_key_exists($p,$requestInput['queryParameters']['regular']) 
+                    && 
+                    !array_key_exists($p,$requestInput['formParameters']['regular'])
+                    && 
+                    !array_key_exists($p,$requestInput['queryParameters']['inputs'])
+                    && 
+                    !array_key_exists($p,$requestInput['formParameters']['inputs'])
+                )
                 {
                     throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
                 }
             }
         }
+
+        return $requestInput; 
     }
 
     private function _configAction()
@@ -173,7 +291,7 @@ class RequestKora
     private function _configUrl()
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
-        $nameOfproject = $this->app->getParamConfig('info.nameOfproject');
+        //$nameOfproject = $this->app->getParamConfig('info.nameOfproject');
         $action = $this->app->getParamConfig('http.action.name');
         $baseUrl = "{$this->Request->getSchemeAndHttpHost()}{$this->Request->getBaseUrl()}";
 
@@ -268,9 +386,16 @@ class RequestKora
       
         $params = $route['keyParams'][$httpMethod];
 
-        $this->paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters);
+        $requestInput = $this->paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters);
 
-        $allParams = array_merge($queryParameters,$formParameters);
+        $allParams = array_merge
+        (
+            $requestInput['queryParameters']['regular'],
+            $requestInput['queryParameters']['inputs'],
+            $requestInput['formParameters']['regular'],
+            $requestInput['formParameters']['inputs']
+        );
+        
 
         $this->app->setParamConfig('http.route.params',[
             'method' => $httpMethod,
