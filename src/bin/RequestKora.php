@@ -6,6 +6,7 @@ use Symfony\Component\HttpFoundation\Request;
 use kora\lib\exceptions\DefaultException;
 use kora\lib\exceptions\InputException;
 use kora\lib\strings\Strings;
+use ReflectionClass;
 use ReflectionProperty;
 use stdClass;
 
@@ -85,77 +86,72 @@ class RequestKora
         return $this;
     }
 
-    private function parseParameters($param, $queryParameters, $formParameters, &$result)
+    private function parseParameters($param, $parameters, &$result, &$parent = null)
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
         $baseName = trim($param);
+        $baseName =  implode('',array_map('ucfirst', explode('_',$baseName)));
         $namespace = "app\\$nameOfApp\\inputs\\{$baseName}Input";
-
-        $parameters = array_merge($queryParameters, $formParameters);
 
         if(class_exists($namespace))
         {
-            $obj = array_key_exists($baseName,$result) ? $result[$baseName] : new $namespace();
-      
-            foreach($parameters as $k => $p)
+            $result[$baseName] = array_key_exists($baseName,$result) ? $result[$baseName] : new $namespace();
+            $refClass = new ReflectionClass($result[$baseName]);
+
+            if($parent != null)
             {
-                $pascalCaseProperty = implode('',array_map('ucfirst', explode('_',$k)));
-                $pascalCasePropertyClass = "{$pascalCaseProperty}Input";
+                $parent->{$baseName} = $result[$baseName];
+            }
 
-                if(property_exists($obj,$k) || property_exists($obj,$pascalCaseProperty) || property_exists($obj,$pascalCasePropertyClass))
-                {
-                    $objKey = property_exists($obj,$k) 
-                    ? $k 
-                    : (property_exists($obj,$pascalCaseProperty) ? $pascalCaseProperty : $pascalCasePropertyClass);
+            // Obtendo todas as propriedades
+            $properties =$refClass->getProperties();
 
-                    $reflection = new ReflectionProperty($obj,$objKey);
-                    $reflection->setAccessible(true);
-           
-                    if($reflection->getType() && !$reflection->getType()->isBuiltin())
-                    {
-                        $class = $reflection->getType()->getName();
-                        $obj = new $class();
-                  
-                        foreach($p as $keyAttr => $valueAttr)
-                        {
-                            if(!property_exists($obj,$keyAttr))
-                            {
-                                $typeOfClass = $obj::class;
-                                throw new InputException("The parameter {$keyAttr} is not allowed in request, not found property in {$typeOfClass}!",400);
-                            }
-                            $ref = new ReflectionProperty($obj,$keyAttr);
-                            $ref->setAccessible(true);
-                            $ref->setValue($obj,$valueAttr);
-                        }
-                     
-                        $obj->validate();
-                        $p = $obj;
-                    }
-             
-                    $reflection->setValue($obj,$p);
-                }
-            } 
-            
-            $result[$baseName] = $obj;
+            $n1 = implode('',array_map('ucfirst', explode('_',$param)));
+            $keys = [
+                $param,
+                $n1,
+                implode('',array_map('mb_strtolower', explode('_',$param))),
+                lcfirst($n1),
+                strtolower(preg_replace('/([a-z])([A-Z])/', '$1_$2', $param))
+            ];
+
+            $keySearch = array_values(array_unique(array_filter($keys, fn($key) => array_key_exists($key, $parameters))));
+
+
+            foreach ($properties as $property)
+            {
+                $this->parseParameters($property->getName(),$parameters[$keySearch[0]], $result, $result[$baseName]);
+            }
         }
         else
         {
-            $result[$param] = array_key_exists($param,$parameters) 
-            ? $parameters[$param] 
-            : throw new InputException("The parameter {$param} is not allowed in request!",400);
+            if(!array_key_exists($param,$parameters))
+            {
+                throw new InputException("The attribute {$param} is not allowed in request!",400);
+            }
+
+            if($parent != null && property_exists($parent,$param))
+            {
+                $parent->{$param} = $parameters[$param];
+            }
+            else
+            {
+                $result[$param] = $parameters[$param];
+            }
         }
     }
 
+   
 
     private function requestInputClass($queryParameters,$formParameters, $params)
     {
         $result = [];
 
         $allParams = array_merge($params['required'],$params['optional']);
-      
+        $parameters = array_merge($queryParameters, $formParameters);
         foreach($allParams as $param)
         {
-            $this->parseParameters($param,$queryParameters,$formParameters,$result);
+            $this->parseParameters($param,$parameters,$result);
         }
 
         return $result;
