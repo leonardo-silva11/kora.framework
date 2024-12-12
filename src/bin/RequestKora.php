@@ -85,96 +85,88 @@ class RequestKora
         return $this;
     }
 
-    private function  paramsSet(string $cKey, string $key, $data, &$result)
+    private function parseParameters($param, $queryParameters, $formParameters, &$result)
     {
         $nameOfApp = $this->app->getParamConfig('app.name');
-        $bNormalize = implode('',array_map('ucfirst', explode('_',$key)));
-        $baseName = "{$bNormalize}Input";
-        $namespace = "app\\$nameOfApp\\inputs\\$baseName";
+        $baseName = trim($param);
+        $namespace = "app\\$nameOfApp\\inputs\\{$baseName}Input";
+
+        $parameters = array_merge($queryParameters, $formParameters);
 
         if(class_exists($namespace))
         {
-            $result[$cKey][$bNormalize] = new $namespace();
- 
-            foreach($data as $k => $p)
+            $obj = array_key_exists($baseName,$result) ? $result[$baseName] : new $namespace();
+      
+            foreach($parameters as $k => $p)
             {
                 $pascalCaseProperty = implode('',array_map('ucfirst', explode('_',$k)));
                 $pascalCasePropertyClass = "{$pascalCaseProperty}Input";
-                if
-                (
-                    !property_exists($result[$cKey][$bNormalize],$k)
-                    &&
-                    !property_exists($result[$cKey][$bNormalize],$pascalCaseProperty)
-                    &&
-                    !property_exists($result[$cKey][$bNormalize],$pascalCasePropertyClass)
-                )
-                {
-                    throw new InputException("The parameter {$k} is not allowed in request, not found property in {$baseName}!");
-                }
 
-                $objKey = property_exists($result[$cKey][$bNormalize],$k) 
-                ? $k 
-                : (property_exists($result[$cKey][$bNormalize],$pascalCaseProperty) ? $pascalCaseProperty : $pascalCasePropertyClass);
-
-                $reflection = new ReflectionProperty($result[$cKey][$bNormalize],$objKey);
-                $reflection->setAccessible(true);
-       
-                if($reflection->getType() && !$reflection->getType()->isBuiltin())
+                if(property_exists($obj,$k) || property_exists($obj,$pascalCaseProperty) || property_exists($obj,$pascalCasePropertyClass))
                 {
-                    $class = $reflection->getType()->getName();
-                    $obj = new $class();
-              
-                    foreach($p as $keyAttr => $valueAttr)
+                    $objKey = property_exists($obj,$k) 
+                    ? $k 
+                    : (property_exists($obj,$pascalCaseProperty) ? $pascalCaseProperty : $pascalCasePropertyClass);
+
+                    $reflection = new ReflectionProperty($obj,$objKey);
+                    $reflection->setAccessible(true);
+           
+                    if($reflection->getType() && !$reflection->getType()->isBuiltin())
                     {
-                        if(!property_exists($obj,$keyAttr))
+                        $class = $reflection->getType()->getName();
+                        $obj = new $class();
+                  
+                        foreach($p as $keyAttr => $valueAttr)
                         {
-                            $typeOfClass = $obj::class;
-                            throw new InputException("The parameter {$keyAttr} is not allowed in request, not found property in {$typeOfClass}!");
+                            if(!property_exists($obj,$keyAttr))
+                            {
+                                $typeOfClass = $obj::class;
+                                throw new InputException("The parameter {$keyAttr} is not allowed in request, not found property in {$typeOfClass}!",400);
+                            }
+                            $ref = new ReflectionProperty($obj,$keyAttr);
+                            $ref->setAccessible(true);
+                            $ref->setValue($obj,$valueAttr);
                         }
-                        $ref = new ReflectionProperty($obj,$keyAttr);
-                        $ref->setAccessible(true);
-                        $ref->setValue($obj,$valueAttr);
+                     
+                        $obj->validate();
+                        $p = $obj;
                     }
-                 
-                    $obj->validate();
-                    $p = $obj;
+             
+                    $reflection->setValue($obj,$p);
                 }
-         
-                $reflection->setValue($result[$cKey][$bNormalize],$p);
-            }               
+            } 
+            
+            $result[$baseName] = $obj;
         }
         else
         {
-            $result[$cKey][$key] = $data;
+            $result[$param] = array_key_exists($param,$parameters) 
+            ? $parameters[$param] 
+            : throw new InputException("The parameter {$param} is not allowed in request!",400);
         }
     }
 
 
-    private function requestInputClass($queryParameters,$formParameters)
+    private function requestInputClass($queryParameters,$formParameters, $params)
     {
-        $result = [
-            'formParameters' => [],
-            'queryParameters' => [],
-        ];
+        $result = [];
 
-        foreach($formParameters as $key => $param)
+        $allParams = array_merge($params['required'],$params['optional']);
+      
+        foreach($allParams as $param)
         {
-            $this->paramsSet('formParameters',$key, $param, $result);
-        }
-
-        foreach($queryParameters as $key => $param)
-        {
-            $this->paramsSet('queryParameters',$key,$param,$result);
+            $this->parseParameters($param,$queryParameters,$formParameters,$result);
         }
 
         return $result;
     }
 
 
-    private function validateObjectInput($key, $requestInput, $httpMethod, $params)
+    private function validateObjectInput($requestInput, $httpMethod, $params)
     {
-        foreach($requestInput[$key] as $k => $obj)
-        {
+   
+        foreach($requestInput as $k => $obj)
+        { 
             if(is_object($obj))
             {  
                 $obj->validate(); 
@@ -194,17 +186,15 @@ class RequestKora
 
         if(!$ignoreParameters)
         {
-            $requestInput = $this->requestInputClass($queryParameters,$formParameters);
-            $this->validateObjectInput('queryParameters',$requestInput, $httpMethod, $params);
-            $this->validateObjectInput('formParameters',$requestInput, $httpMethod, $params);
-         
+            $requestInput = $this->requestInputClass($queryParameters,$formParameters,$params);
+            $this->validateObjectInput($requestInput, $httpMethod, $params);
+            $this->validateObjectInput($requestInput, $httpMethod, $params);
+
             foreach($params['required'] as $p)
             {
                 if
                 (
-                    !array_key_exists($p,$requestInput['queryParameters']) 
-                    && 
-                    !array_key_exists($p,$requestInput['formParameters'])
+                    !array_key_exists($p,$requestInput) 
                 )
                 {
                     throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
@@ -376,16 +366,9 @@ class RequestKora
 
         $requestInput = $this->paramsRequestValidate($httpMethod,$params,$queryParameters,$formParameters);
 
-        $allParams = array_merge
-        (
-            $requestInput['queryParameters'],
-            $requestInput['formParameters']
-        );
-        
-
         $this->app->setParamConfig('http.route.params',[
             'method' => $httpMethod,
-            'parameters' => $allParams
+            'parameters' => $requestInput
         ],'protected');
        
         return $this;
