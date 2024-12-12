@@ -117,10 +117,15 @@ class RequestKora
 
             $keySearch = array_values(array_unique(array_filter($keys, fn($key) => array_key_exists($key, $parameters))));
 
-
             foreach ($properties as $property)
             {
-                $this->parseParameters($property->getName(),$parameters[$keySearch[0]], $result, $result[$baseName]);
+                $this->parseParameters
+                (
+                    $property->getName(),
+                    !empty($keySearch[0]) ? $parameters[$keySearch[0]] : $parameters, 
+                    $result, 
+                    $result[$baseName]
+                );
             }
         }
         else
@@ -132,7 +137,9 @@ class RequestKora
 
             if($parent != null && property_exists($parent,$param))
             {
-                $parent->{$param} = $parameters[$param];
+                $ref = new ReflectionProperty($parent,$param);
+                $ref->setAccessible(true);
+                $ref->setValue($parent,$parameters[$param]);
             }
             else
             {
@@ -160,7 +167,7 @@ class RequestKora
 
     private function validateObjectInput($requestInput, $httpMethod, $params)
     {
-   
+
         foreach($requestInput as $k => $obj)
         { 
             if(is_object($obj))
@@ -183,7 +190,6 @@ class RequestKora
         if(!$ignoreParameters)
         {
             $requestInput = $this->requestInputClass($queryParameters,$formParameters,$params);
-            $this->validateObjectInput($requestInput, $httpMethod, $params);
             $this->validateObjectInput($requestInput, $httpMethod, $params);
 
             foreach($params['required'] as $p)
