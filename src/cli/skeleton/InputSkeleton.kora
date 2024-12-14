@@ -1,0 +1,12 @@
+<?php 
+namespace app\{{__nameApp}}\inputs;
+
+use kora\bin\IInputKora;
+
+class {{__nameInputFull}} implements IInputKora
+{
+    public function validate(): void
+    {
+       
+    }
+}
