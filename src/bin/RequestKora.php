@@ -161,10 +161,13 @@ class RequestKora
         {
             if (in_array($className, $allParams)) 
             {
-                $mappedParameters = array_merge($mappedParameters, array_keys((array)$classInstance));
+                $refClass = new ReflectionClass($classInstance);
+                $properties = $refClass->getProperties();
+                $propertyNames = array_map(fn($property) => $property->getName(), $properties);
+                $mappedParameters = array_merge($mappedParameters, $propertyNames);
             }
         }
-
+     
         $mappedParameters = array_unique($mappedParameters);
         $noMappedParameters = array_diff(array_keys($parameters), $mappedParameters);
 
