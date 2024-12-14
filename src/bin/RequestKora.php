@@ -157,11 +157,11 @@ class RequestKora
     {
         $mappedParameters = [];
 
-        foreach ($result as $className => $classInstance) 
+        foreach ($result as $key => $item) 
         {
-            if (in_array($className, $allParams)) 
+            if (is_object($item) && $item instanceof IInputKora && in_array($key, $allParams)) 
             {
-                $refClass = new ReflectionClass($classInstance);
+                $refClass = new ReflectionClass($item);
                 $properties = $refClass->getProperties();
                 $propertyNames = array_map(fn($property) => $property->getName(), $properties);
                 $mappedParameters = array_merge($mappedParameters, $propertyNames);
