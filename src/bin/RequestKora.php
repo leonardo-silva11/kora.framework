@@ -44,7 +44,7 @@ class RequestKora
               )
             {
 
-                throw new DefaultException("The parameter `{$p}` is not allowed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
+                throw new DefaultException("The parameter `{$p}` is not allowed or missed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
             }
     }
 
@@ -104,7 +104,12 @@ class RequestKora
             }
 
             // Obtendo todas as propriedades
-            $properties =$refClass->getProperties();
+            $properties = $refClass->getProperties();
+
+            if(empty($properties))
+            {
+                throw new InputException("There are no attributes defined in the class: {$baseName}Input",400);
+            }
 
             $n1 = implode('',array_map('ucfirst', explode('_',$param)));
             $keys = [
@@ -132,7 +137,7 @@ class RequestKora
         {
             if(!array_key_exists($param,$parameters))
             {
-                throw new InputException("The attribute {$param} is not allowed in request!",400);
+                throw new InputException("The attribute {$param} is not allowed or missed in request!",400);
             }
 
             if($parent != null && property_exists($parent,$param))
@@ -148,18 +153,41 @@ class RequestKora
         }
     }
 
+    private function verifyParametersRequest($result, $parameters, $allParams, $params, $httpMethod)
+    {
+        $mappedParameters = [];
+
+        foreach ($result as $className => $classInstance) 
+        {
+            if (in_array($className, $allParams)) 
+            {
+                $mappedParameters = array_merge($mappedParameters, array_keys((array)$classInstance));
+            }
+        }
+
+        $mappedParameters = array_unique($mappedParameters);
+        $noMappedParameters = array_diff(array_keys($parameters), $mappedParameters);
+
+        foreach($noMappedParameters as $param)
+        {
+            $this->paramsRequestValidateAll($httpMethod,$params,$param);
+        }
+    }
    
 
-    private function requestInputClass($queryParameters,$formParameters, $params)
+    private function requestInputClass($queryParameters,$formParameters, $params, $httpMethod)
     {
         $result = [];
 
         $allParams = array_merge($params['required'],$params['optional']);
         $parameters = array_merge($queryParameters, $formParameters);
+
         foreach($allParams as $param)
         {
             $this->parseParameters($param,$parameters,$result);
         }
+
+        $this->verifyParametersRequest($result, $parameters, $allParams, $params, $httpMethod);
 
         return $result;
     }
@@ -167,16 +195,11 @@ class RequestKora
 
     private function validateObjectInput($requestInput, $httpMethod, $params)
     {
-
         foreach($requestInput as $k => $obj)
         { 
             if(is_object($obj))
             {  
                 $obj->validate(); 
-            }
-            else
-            {
-                $this->paramsRequestValidateAll($httpMethod,$params,$k);
             }
         }
     }
@@ -189,19 +212,8 @@ class RequestKora
 
         if(!$ignoreParameters)
         {
-            $requestInput = $this->requestInputClass($queryParameters,$formParameters,$params);
+            $requestInput = $this->requestInputClass($queryParameters,$formParameters,$params,$httpMethod);
             $this->validateObjectInput($requestInput, $httpMethod, $params);
-
-            foreach($params['required'] as $p)
-            {
-                if
-                (
-                    !array_key_exists($p,$requestInput) 
-                )
-                {
-                    throw new DefaultException("The parameter `{$p}` is required for request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
-                }
-            }
         }
 
         return $requestInput; 
