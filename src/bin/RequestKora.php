@@ -37,15 +37,20 @@ class RequestKora
 
     private function paramsRequestValidateAll($httpMethod,$params,$p)
     {
-            if(
-                (!in_array("*",$params['optional']) && !in_array($p,$params['optional'])) 
-                &&
-                (!in_array("*",$params['required']) && !in_array($p,$params['required']))
-              )
-            {
-
-                throw new DefaultException("The parameter `{$p}` is not allowed or missed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !",400);
-            }
+        $optionalLower = array_map('strtolower', $params['optional']);
+        $requiredLower = array_map('strtolower', $params['required']);
+        $p = strtolower($p);
+        
+        if (
+            (!in_array("*", $optionalLower) && !in_array($p, $optionalLower)) 
+            &&
+            (!in_array("*", $requiredLower) && !in_array($p, $requiredLower))
+        ) {
+            throw new DefaultException(
+                "The parameter `{$p}` is not allowed or missed from request `{$httpMethod}` for app: `{$this->app->getParamConfig('app.name')}` !", 
+                400
+            );
+        }
     }
 
     private function parseCurrentRoute()
@@ -135,16 +140,18 @@ class RequestKora
         }
         else
         {
-            if(!array_key_exists($param,$parameters))
+
+            if(is_array($parameters) && !array_key_exists($param,$parameters))
             {
                 throw new InputException("The attribute {$param} is not allowed or missed in request!",400);
             }
 
             if($parent != null && property_exists($parent,$param))
             {
+        
                 $ref = new ReflectionProperty($parent,$param);
                 $ref->setAccessible(true);
-                $ref->setValue($parent,$parameters[$param]);
+                $ref->setValue($parent,is_array($parameters) ? $parameters[$param] : $parameters);
             }
             else
             {
@@ -159,18 +166,20 @@ class RequestKora
 
         foreach ($result as $key => $item) 
         {
+        
             if (is_object($item) && $item instanceof IInputKora && in_array($key, $allParams)) 
-            {
+            {    
                 $refClass = new ReflectionClass($item);
                 $properties = $refClass->getProperties();
                 $propertyNames = array_map(fn($property) => $property->getName(), $properties);
                 $mappedParameters = array_merge($mappedParameters, $propertyNames);
+                //array_push($mappedParameters,$key);
             }
         }
-     
+
         $mappedParameters = array_unique($mappedParameters);
         $noMappedParameters = array_diff(array_keys($parameters), $mappedParameters);
-
+        //dd($noMappedParameters);
         foreach($noMappedParameters as $param)
         {
             $this->paramsRequestValidateAll($httpMethod,$params,$param);
