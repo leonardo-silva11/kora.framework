@@ -142,7 +142,7 @@ class MakeConfig extends CommandCli
             return true;
         }
 
-        $this->log->save('appsettings.json alredy exists!',false);
+        $this->log->save('appsettings.json already exists!',false);
         $this->log->showAllBag(false);
         return false;
     }
@@ -176,7 +176,7 @@ class MakeConfig extends CommandCli
         $this->readSettingsFromJson();
         
         $keyArray = explode('.',$key);
-        
+ 
         $appSettings = &$this->appSettings;
 
         for($i = 0; $i < count($keyArray);++$i)
@@ -206,6 +206,13 @@ class MakeConfig extends CommandCli
         return \json_encode($this->routes,JSON_PRETTY_PRINT);
     }
 
+    public function defaultRouteExists()
+    {
+        $settings = $this->readSettingsFromJson();
+
+        return array_key_exists('defaultApp',$settings) && !empty($settings['defaultApp']);
+    }
+
     public function addSetting(string $key, mixed $value, $rewrite = false)
     {
         $this->readSettingsFromJson();
@@ -213,7 +220,7 @@ class MakeConfig extends CommandCli
         $keyArray = explode('.',$key);
 
         $appSettings = &$this->appSettings;
-    
+
         for($i = 0; $i < count($keyArray);++$i)
         {
             $k = $keyArray[$i];

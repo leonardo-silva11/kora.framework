@@ -156,24 +156,63 @@ class MakeAppCommand  extends CommandCli
     
             $this->creatAppClass($dir,$nameAppN);
 
-            $MakeConfig->addSetting('defaultApp',$nameAppLower)
-                        ->addSetting('apps',[
-                            $nameAppN => [
-                                "defaultType" => $front ? "app" : "api",
-                                "defaultRoute" => "$nameControllerLower/$nameActionLower",
-                                "name" => $nameAppLower,
-                                "connectionStrings" => new \stdClass()
-                            ]
-                        ]);
+            $exists = $MakeConfig->defaultRouteExists();
+
+            if(!$exists)
+            {
+                $MakeConfig->addSetting('defaultApp',$nameAppLower)
+                ->addSetting('apps',[
+                    $nameAppN => [
+                        "defaultType" => $front ? "app" : "api",
+                        "defaultRoute" => "$nameControllerLower/$nameActionLower",
+                        "name" => $nameAppLower,
+                        "connectionStrings" => new \stdClass(),
+                        "secretKeys" => [
+                            "public" => hash('sha512',uniqid()),
+                            "private" => hash('sha512',uniqid())
+                        ],
+                        "clientCredentials" => [
+                            "clientId" => $clientId,
+                            "clientSecret" => $clientSecret,
+                        ]
+                    ]
+                ]);
+            }
+            else
+            {
+                $newApp = [
+                        "defaultType" => $front ? "app" : "api",
+                        "defaultRoute" => "$nameControllerLower/$nameActionLower",
+                        "name" => $nameAppLower,
+                        "connectionStrings" => new \stdClass(),
+                        "secretKeys" => [
+                            "public" => base64_encode(hash('sha512',uniqid())),
+                            "private" => base64_encode(hash('sha512',uniqid()))
+                        ],
+                        "clientCredentials" => [
+                            "clientId" => $clientId,
+                            "clientSecret" => $clientSecret,
+                        ]
+                ];
+
+                $MakeConfig->addSetting("apps.{$nameAppN}",$newApp);
+               // $MakeConfig->settingsSave(true);
+            }
+
               
             $this->createFront($MakeConfig,$nameAppN,$front);
-          
+
+           /* $MakeConfig->addSetting("apps.$nameAppN.secretKeys",[
+                "public" => hash('sha512',uniqid()),
+                "private" => hash('sha512',uniqid())
+            ]);
+
             $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
                 "clientId" => $clientId,
                 "clientSecret" => $clientSecret,
-            ]);
+            ]);*/
     
-            $MakeConfig->settingsSave();
+            $MakeConfig->settingsSave($exists);
          
             $this->createControllerClass($dir, $nameAppN, $controller,$action,$front,$forceBuild);
             $this->createModelClass($dir, $nameAppN, $model,$action);
