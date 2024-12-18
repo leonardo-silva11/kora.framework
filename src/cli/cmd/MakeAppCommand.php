@@ -67,6 +67,8 @@ class MakeAppCommand  extends CommandCli
         }
 
         $this->log->showAllBag(false);
+
+        return $file->exists("$nameApp.php") && !$rewrite;
     }
 
     private function createFront
@@ -100,6 +102,113 @@ class MakeAppCommand  extends CommandCli
                 $this->createView($dir,$nameApp,$nameControllerLower, $action, $defaultTemplateView, $defaultExtensionView);
             }
         }
+    }
+
+    private function generateRSAPublicKey(FileManager $file, string $nameApp, $password)
+    {
+
+        $privateKeyPath = $file->inMemory("private-{$nameApp}.key");
+        $publicKeyPath = $file->inMemory("public-{$nameApp}.key");
+        $passphrase = $password;
+
+        $command = sprintf(
+            'openssl rsa -in %s -passin pass:%s -pubout -out %s',
+            escapeshellarg($privateKeyPath),
+            escapeshellarg($passphrase),
+            escapeshellarg($publicKeyPath)
+        );
+        
+        $process = proc_open(
+            $command,
+            [
+                1 => ['pipe', 'w'], // Saída padrão
+                2 => ['pipe', 'w'], // Saída de erro
+            ],
+            $pipes
+        );
+        
+        if (is_resource($process)) 
+        {
+            $output = stream_get_contents($pipes[1]); // Captura a saída padrão (se necessário)
+            $error = stream_get_contents($pipes[2]); // Captura a saída de erro
+        
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+        
+            $returnCode = proc_close($process);
+        
+            if ($returnCode === 0) 
+            {
+                $this->log->save("public key {public-{$nameApp}.key} extracted!");
+            } 
+            else 
+            {
+                $this->log->save("failed while generate {public-{$nameApp}.key}!",true);
+            }
+        } 
+        else 
+        {
+            $this->log->save("command failed while generate key {public-{$nameApp}.key}!",true);
+        }
+        
+    } 
+
+    private function generateRSAPrivateKey(bool $appExists, MakeConfig $MakeConfig, string $nameApp, array $secretKeys)
+    {
+        $passphrase = $secretKeys['private'];
+        $nameProject = basename($this->paths['project']);
+        $dir = new DirectoryManager($nameProject);
+
+        $file = new FileManager($dir);
+
+        $nameFile = "private-{$nameApp}.key";
+
+        if($appExists)
+        {
+            $passphrase = $MakeConfig->readSettingsByKey('apps.Oauth.secretKeys.private');
+        }
+
+        if(!$file->exists($nameFile))
+        {
+            $path = $file->inMemory($nameFile);
+
+            $command = "openssl genrsa -aes128 -passout pass:$passphrase -out $path 2048";
+
+            $descriptorspec = [
+                0 => ["pipe", "r"], // stdin
+                1 => ["pipe", "w"], // stdout
+                2 => ["pipe", "w"]  // stderr
+            ];
+            
+            $process = proc_open($command, $descriptorspec, $pipes);
+            
+            if (is_resource($process)) 
+            {
+                // Fechando as pipes stdin e capturando stdout e stderr
+                fclose($pipes[0]);
+                $stdout = stream_get_contents($pipes[1]);
+                fclose($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[2]);
+            
+                $return_value = proc_close($process);
+            
+                if ($return_value === 0) 
+                {
+                    $this->log->save("private key {$nameFile} created!");
+                } 
+                else 
+                {
+                    $this->log->save("failed while generate {$nameFile}!",true);
+                }
+            } 
+            else 
+            {
+                $this->log->save("command failed while generate key {$nameFile}!",true);
+            }
+        }
+        
+        $this->generateRSAPublicKey($file, $nameApp, $passphrase);
     }
 
     public function exec(array $args, $cmd = 'app')
@@ -153,67 +262,44 @@ class MakeAppCommand  extends CommandCli
         else if($cmd == 'app')
         {
             $dir = $this->directoryManager->createByPath($this->paths['app']);
-    
-            $this->creatAppClass($dir,$nameAppN);
 
-            $exists = $MakeConfig->defaultRouteExists();
+            $appExists = $this->creatAppClass($dir,$nameAppN);
 
-            if(!$exists)
+            $secretKeys = [
+                'public' => base64_encode(hash('sha512',uniqid('public'))),
+                'private' => base64_encode(hash('sha512',uniqid('private'))),
+            ];
+
+            $this->generateRSAPrivateKey($appExists,$MakeConfig,$nameAppLower,$secretKeys);
+
+            if(!$appExists)
             {
-                $MakeConfig->addSetting('defaultApp',$nameAppLower)
-                ->addSetting('apps',[
-                    $nameAppN => [
-                        "defaultType" => $front ? "app" : "api",
-                        "defaultRoute" => "$nameControllerLower/$nameActionLower",
-                        "name" => $nameAppLower,
-                        "connectionStrings" => new \stdClass(),
-                        "secretKeys" => [
-                            "public" => hash('sha512',uniqid()),
-                            "private" => hash('sha512',uniqid())
-                        ],
-                        "clientCredentials" => [
-                            "clientId" => $clientId,
-                            "clientSecret" => $clientSecret,
+                $defaultExists = $MakeConfig->defaultRouteExists();
+
+                if(!$defaultExists)
+                {
+                    $MakeConfig->addSetting('defaultApp',$nameAppLower);
+                }
+
+
+
+                $MakeConfig->addSetting("apps.{$nameAppN}",
+                        [
+                            "defaultType" => $front ? "app" : "api",
+                            "defaultRoute" => "$nameControllerLower/$nameActionLower",
+                            "name" => $nameAppLower,
+                            "connectionStrings" => new \stdClass(),
+                            "secretKeys" => $secretKeys,
+                            "clientCredentials" => [
+                                "clientId" => $clientId,
+                                "clientSecret" => $clientSecret,
+                            ]
                         ]
-                    ]
-                ]);
+                    );
             }
-            else
-            {
-                $newApp = [
-                        "defaultType" => $front ? "app" : "api",
-                        "defaultRoute" => "$nameControllerLower/$nameActionLower",
-                        "name" => $nameAppLower,
-                        "connectionStrings" => new \stdClass(),
-                        "secretKeys" => [
-                            "public" => base64_encode(hash('sha512',uniqid())),
-                            "private" => base64_encode(hash('sha512',uniqid()))
-                        ],
-                        "clientCredentials" => [
-                            "clientId" => $clientId,
-                            "clientSecret" => $clientSecret,
-                        ]
-                ];
-
-                $MakeConfig->addSetting("apps.{$nameAppN}",$newApp);
-               // $MakeConfig->settingsSave(true);
-            }
-
-              
-            $this->createFront($MakeConfig,$nameAppN,$front);
-
-           /* $MakeConfig->addSetting("apps.$nameAppN.secretKeys",[
-                "public" => hash('sha512',uniqid()),
-                "private" => hash('sha512',uniqid())
-            ]);
-
-            $MakeConfig->addSetting("apps.$nameAppN.clientCredentials",[
-                "clientId" => $clientId,
-                "clientSecret" => $clientSecret,
-            ]);*/
-    
-            $MakeConfig->settingsSave($exists);
-         
+           
+            $this->createFront($MakeConfig,$nameAppN,$front);        
+            $MakeConfig->settingsSave(true);
             $this->createControllerClass($dir, $nameAppN, $controller,$action,$front,$forceBuild);
             $this->createModelClass($dir, $nameAppN, $model,$action);
         }
