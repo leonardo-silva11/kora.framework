@@ -10,25 +10,13 @@ class {{__name}} extends AppKora
         parent::__construct($this, $config); 
     }
 
-    public function extraConfig(): void 
+    public function execBeforeAction(): void 
     {
-       //Extra configuration
-       /**
-       * Example with config database
-       **/
-       // $appName = $this->getName();
-       // $dbConfig = $this->getParamConfig("appSettings.apps.{$appName}.connectionStrings.xxx");
-       // $CapsuleManager = new CapsuleManager();
-       // $CapsuleManager->addConnection($dbConfig);
-       // $CapsuleManager->setAsGlobal();
-       // $CapsuleManager->bootEloquent();
 
-       /**
-       * Example inject instance
-       **/
-        //$this->addInjectable(Request::class, $this->getParamConfig('http.request.instance'));
-        //$this->addInjectable(DirectoryManager::class, $this->getParamConfig('storage.defaultStorage'));
-        //$this->addInjectable(CapsuleManager::class, $CapsuleManager);
-        //$this->addInjectable('MyKey, 'My String Static');
+    }
+
+    public function execAfterAction(): void 
+    {
+
     }
 }
