@@ -25,6 +25,11 @@ class FileManager
         return file_exists("{$this->Storage->getCurrentStorage()}{$this->Storage->getDirectorySeparator()}{$fileName}");
     }
 
+    public function inMemory(string $nameFile)
+    {
+        return "{$this->Storage->getCurrentStorage()}{$this->Storage->getDirectorySeparator()}{$nameFile}";
+    }
+
     private function getNewPathFile(string $name): string
     {
         return "{$this->Storage->getCurrentStorage()}{$this->Storage->getDirectorySeparator()}{$name}";
