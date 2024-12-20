@@ -153,7 +153,7 @@ class MakeAppCommand  extends CommandCli
         
     } 
 
-    private function generateRSAPrivateKey(bool $appExists, MakeConfig $MakeConfig, string $nameApp, array $secretKeys)
+    private function generateRSAPrivateKey(bool $appExists, MakeConfig $MakeConfig, string $nameApp, string $nameAppClass, array $secretKeys)
     {
         $passphrase = $secretKeys['private'];
         $nameProject = basename($this->paths['project']);
@@ -165,7 +165,17 @@ class MakeAppCommand  extends CommandCli
 
         if($appExists)
         {
-            $passphrase = $MakeConfig->readSettingsByKey('apps.Oauth.secretKeys.private');
+            try 
+            {
+                $passphrase = $MakeConfig->readSettingsByKey("apps.{$nameAppClass}.secretKeys.private");
+            } 
+            catch (\Throwable $th) 
+            {
+                $passphrase = $secretKeys['private'];
+
+                $MakeConfig->addSetting("apps.{$nameAppClass}.secretKeys",$secretKeys);
+                $this->log->save($th->getMessage());
+            }
         }
 
         if(!$file->exists($nameFile))
@@ -269,8 +279,8 @@ class MakeAppCommand  extends CommandCli
                 'public' => base64_encode(hash('sha512',uniqid('public'))),
                 'private' => base64_encode(hash('sha512',uniqid('private'))),
             ];
-
-            $this->generateRSAPrivateKey($appExists,$MakeConfig,$nameAppLower,$secretKeys);
+       
+            $this->generateRSAPrivateKey($appExists,$MakeConfig,$nameAppLower,$nameAppN,$secretKeys);
 
             if(!$appExists)
             {
@@ -280,8 +290,6 @@ class MakeAppCommand  extends CommandCli
                 {
                     $MakeConfig->addSetting('defaultApp',$nameAppLower);
                 }
-
-
 
                 $MakeConfig->addSetting("apps.{$nameAppN}",
                         [
