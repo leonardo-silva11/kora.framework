@@ -11,6 +11,7 @@ class MakeConfig extends CommandCli
 {
     private const _APP_SETTINGS = 'appsettings';
     private const _ROUTES = 'routes';
+    private bool $pending = false;
     private string $appName;
     private string $project;
     private array $appSettings = [];
@@ -139,6 +140,7 @@ class MakeConfig extends CommandCli
         {
             $this->appConfig->save('appsettings.json',$this->getSettingsJson());
             $this->log->save('appsettings.json created!',false);
+            $this->pending = false;
             return true;
         }
 
@@ -215,7 +217,10 @@ class MakeConfig extends CommandCli
 
     public function addSetting(string $key, mixed $value, $rewrite = false)
     {
-        $this->readSettingsFromJson();
+        if(!$this->pending)
+        {
+            $this->readSettingsFromJson();
+        }
 
         $keyArray = explode('.',$key);
 
@@ -232,6 +237,7 @@ class MakeConfig extends CommandCli
             else
             {
                 $appSettings[$k] = $value;
+                $this->pending = true;
                 break;
             }
         }
