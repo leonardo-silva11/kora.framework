@@ -153,9 +153,9 @@ class MakeAppCommand  extends CommandCli
         
     } 
 
-    private function generateRSAPrivateKey(bool $appExists, MakeConfig $MakeConfig, string $nameApp, string $nameAppClass, array $secretKeys)
+    private function generateRSAPrivateKey(bool $appExists, MakeConfig $MakeConfig, string $nameApp, string $nameAppClass, array $clientCredentials)
     {
-        $passphrase = $secretKeys['private'];
+        $passphrase = $clientCredentials['client_secret'];
         $nameProject = basename($this->paths['project']);
         $dir = new DirectoryManager($nameProject);
 
@@ -167,13 +167,13 @@ class MakeAppCommand  extends CommandCli
         {
             try 
             {
-                $passphrase = $MakeConfig->readSettingsByKey("apps.{$nameAppClass}.secretKeys.private");
+                $passphrase = $MakeConfig->readSettingsByKey("apps.{$nameAppClass}.clientCredentials.private");
             } 
             catch (\Throwable $th) 
             {
-                $passphrase = $secretKeys['private'];
+                $passphrase = $clientCredentials['client_secret'];
 
-                $MakeConfig->addSetting("apps.{$nameAppClass}.secretKeys",$secretKeys);
+                $MakeConfig->addSetting("apps.{$nameAppClass}.clientCredentials",$clientCredentials);
                 $this->log->save($th->getMessage());
             }
         }
@@ -275,12 +275,12 @@ class MakeAppCommand  extends CommandCli
 
             $appExists = $this->creatAppClass($dir,$nameAppN);
 
-            $secretKeys = [
-                'public' => base64_encode(hash('sha512',uniqid('public'))),
-                'private' => base64_encode(hash('sha512',uniqid('private'))),
+            $clientCredentials = [
+                'client_id' => base64_encode(hash('sha512',uniqid('client_id'))),
+                'client_secret' => base64_encode(hash('sha512',uniqid('client_secret'))),
             ];
        
-            $this->generateRSAPrivateKey($appExists,$MakeConfig,$nameAppLower,$nameAppN,$secretKeys);
+            $this->generateRSAPrivateKey($appExists,$MakeConfig,$nameAppLower,$nameAppN,$clientCredentials);
 
             if(!$appExists)
             {
@@ -297,11 +297,7 @@ class MakeAppCommand  extends CommandCli
                             "defaultRoute" => "$nameControllerLower/$nameActionLower",
                             "name" => $nameAppLower,
                             "connectionStrings" => new \stdClass(),
-                            "secretKeys" => $secretKeys,
-                            "clientCredentials" => [
-                                "clientId" => $clientId,
-                                "clientSecret" => $clientSecret,
-                            ]
+                            "clientCredentials" => $clientCredentials
                         ]
                     );
             }
