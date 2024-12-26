@@ -3,5 +3,5 @@ namespace kora\bin;
 
 interface IInputKora
 {
-    public function validate(): void;
+    public function validate(mixed $arg = null): void;
 }

@@ -102,7 +102,7 @@ class RouterKora
         $config['app']['isDefault'] = $requestUri === '/' || mb_strtolower($requestUriCollection[0]) === $config['appSettings']['defaultApp'];
         $config['app']['name'] = $config['app']['isDefault'] ? $config['appSettings']['defaultApp'] : $app;
         $appConfig = Collections::getElementArrayKeyInsensitive($config['app']['name'],$config['appSettings']['apps']);
- 
+    
         if(empty($appConfig))
         {
             throw new DefaultException("app config in {appsettings.json} it's misconfigured or does not exist!",500);
@@ -124,7 +124,7 @@ class RouterKora
                     }
                } 
         }
-
+   
         $Class = "app\\{$config['app']['name']}\\{$config['app']['class']}";
             //colocar validações de chaves app.name e app.class
         $path =  $config['pathOfProject'].DIRECTORY_SEPARATOR.
@@ -136,17 +136,18 @@ class RouterKora
         {
             throw new DefaultException("The app {$config['app']['name']} class not found in: {$path}",500);
         }
-    
+
         $config['app']['path'] = dirname($path);
         $config['app']['pathClass'] = $path;
         $config['app']['fullName'] = $Class;
- 
+
         $this->app = new $Class($config);
+      
     }
 
     private function parseApp(array &$config): void
     {
-
+       
         $appSettings = $config['appSettings'];
 
         if(!Collections::arrayKeyExistsInsensitive('apps',$appSettings))
@@ -160,18 +161,23 @@ class RouterKora
         }
 
         $this->newInstanceApp($config);
-       
-        (new RequestKora($config));
+     
+        $reqKora = (new RequestKora($config));
+        
         $this->callController(
             $config,
+            $reqKora,
             (new MiddlewareKora($config))
         ); 
     }
 
-    private function callController(array $config,MiddlewareKora $MiddlewareKora)
+    private function callController(array $config, RequestKora $reqKora, MiddlewareKora $MiddlewareKora)
     {
         $this->app->execBeforeAction();
 
+        $requestInput = $this->app->getParamConfig('http.route.params.parameters','protected');
+        $reqKora->validateObjectInput($requestInput);
+    
         $serviceContainer  = new DependencyManagerKora($config);
         $constructorDependencies = $serviceContainer->resolveConstructorDependencies();
         $this->app->block();
@@ -181,7 +187,7 @@ class RouterKora
         $refMethod->setAccessible(true);
         $refMethod->invokeArgs(null,[$this->app]);
         $refMethod->setAccessible(false);
-
+      
         $controllerClass = $this->app->getParamConfig('http.controller.namespace');
         $controller = new $controllerClass(...$constructorDependencies);
 
@@ -194,14 +200,15 @@ class RouterKora
         if($response instanceof BagKora)
         {       
             $this->app->addInjectable($response->getName(),$response);
-          
+         
             $parameters = $serviceContainer->filterRouteParameters($controller);
+           
             $action = $this->app->getParamConfig('http.action.name');
             $services = $serviceContainer->resolveRouteDependencies();
             $parameters += $services;
             $response = $controller->$action(...$parameters);
         }
-
+   
         if(!($response instanceof IMenssengerKora))
         {
             throw new DefaultException(sprintf('Response must be an instance of %s!',IMenssengerKora::class),500);

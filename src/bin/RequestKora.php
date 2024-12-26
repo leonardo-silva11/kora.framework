@@ -15,6 +15,7 @@ class RequestKora
     private AppKora $app;
     private Request $Request;
     private array $config;
+    private int $debug = 0;
     
     public function __construct(array &$config)
     {
@@ -31,7 +32,7 @@ class RequestKora
              ->_configUrl()
              ->_configPaths()
              ->_paramsRequest();
-
+     
         return $this;
     }
 
@@ -97,10 +98,11 @@ class RequestKora
         $baseName = trim($param);
         $baseName =  implode('',array_map('ucfirst', explode('_',$baseName)));
         $namespace = "app\\$nameOfApp\\inputs\\{$baseName}Input";
-
-        if(class_exists($namespace))
+        ++$this->debug;
+        if(class_exists($namespace) && $parent == null || ($parent != null && $parent::class !=  $namespace))
         {
             $result[$baseName] = array_key_exists($baseName,$result) ? $result[$baseName] : new $namespace();
+         
             $refClass = new ReflectionClass($result[$baseName]);
 
             if($parent != null)
@@ -140,8 +142,8 @@ class RequestKora
         }
         else
         {
-
-            if(is_array($parameters) && !array_key_exists($param,$parameters))
+        
+            if((is_array($parameters) && !array_key_exists($param,$parameters)) && ($parent != null && !property_exists($parent,$param)))
             {
                 throw new InputException("The attribute {$param} is not allowed or missed in request!",400);
             }
@@ -151,7 +153,7 @@ class RequestKora
         
                 $ref = new ReflectionProperty($parent,$param);
                 $ref->setAccessible(true);
-                $ref->setValue($parent,is_array($parameters) ? $parameters[$param] : $parameters);
+                $ref->setValue($parent,(is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters);
             }
             else
             {
@@ -173,13 +175,12 @@ class RequestKora
                 $properties = $refClass->getProperties();
                 $propertyNames = array_map(fn($property) => $property->getName(), $properties);
                 $mappedParameters = array_merge($mappedParameters, $propertyNames);
-                //array_push($mappedParameters,$key);
             }
         }
 
         $mappedParameters = array_unique($mappedParameters);
         $noMappedParameters = array_diff(array_keys($parameters), $mappedParameters);
-        //dd($noMappedParameters);
+
         foreach($noMappedParameters as $param)
         {
             $this->paramsRequestValidateAll($httpMethod,$params,$param);
@@ -205,7 +206,7 @@ class RequestKora
     }
 
 
-    private function validateObjectInput($requestInput, $httpMethod, $params)
+    public function validateObjectInput($requestInput)
     {
         foreach($requestInput as $k => $obj)
         { 
@@ -225,7 +226,7 @@ class RequestKora
         if(!$ignoreParameters)
         {
             $requestInput = $this->requestInputClass($queryParameters,$formParameters,$params,$httpMethod);
-            $this->validateObjectInput($requestInput, $httpMethod, $params);
+           
         }
 
         return $requestInput; 
@@ -354,14 +355,14 @@ class RequestKora
             'namespaceParent' => $namespaceParent,
             'path' => $path
         ],'protected');
-
+      
         return $this;
     }
 
     private function _paramsRequest()
     {
         $route = $this->app->getParamConfig('http.route');
-
+   
         $httpMethod = mb_strtolower($this->Request->getMethod());
 
         if(!Collections::arrayKeyExistsInsensitive($httpMethod,$route['keyParams']))
@@ -384,7 +385,7 @@ class RequestKora
         $this->Request->headers->get('Content-Type') === 'application/json' 
         ? json_decode($this->Request->getContent(),true)
         : []; 
-    
+
         $formParameters = array_merge($formCollection['x-www-form-urlencoded'],$formCollection['form-data-body'],$formCollection['json'] ?? []);
         $queryParameters = $this->Request->query->all();
       
@@ -394,7 +395,8 @@ class RequestKora
 
         $this->app->setParamConfig('http.route.params',[
             'method' => $httpMethod,
-            'parameters' => $requestInput
+            'parameters' => $requestInput,
+            'headers' => $this->Request->headers
         ],'protected');
        
         return $this;

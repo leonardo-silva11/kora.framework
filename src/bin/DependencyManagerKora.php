@@ -142,7 +142,7 @@ class DependencyManagerKora
                 throw new RuntimeException("Unsupported parameter type for parameter {$parameter->getName()} in class $namespaceClass.");
             }
         }
-       // dd('resolve',$aliasDependency,$namespaceClass,$dependencies,$this->app->injectables());
+
         return $reflectionClass->newInstanceArgs($dependencies);
     }
 
@@ -391,7 +391,6 @@ class DependencyManagerKora
         $action = $action ?? $this->app->getParamConfig('http.action.name','protected');
         $httpParameters = $httpParameters ?? $this->app->getParamConfig('http.route.params.parameters','protected');
         $routeDependencies = $routeDependencies ?? $this->resolveRouteDependencies();
-
         $reflection = new ReflectionMethod($controller, $action);
         $mParameters = $reflection->getParameters();
 
