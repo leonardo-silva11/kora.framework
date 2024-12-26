@@ -99,7 +99,8 @@ class RequestKora
         $baseName =  implode('',array_map('ucfirst', explode('_',$baseName)));
         $namespace = "app\\$nameOfApp\\inputs\\{$baseName}Input";
         ++$this->debug;
-        if(class_exists($namespace) && $parent == null || ($parent != null && $parent::class !=  $namespace))
+
+        if(class_exists($namespace) && $parent == null || ($parent != null && $parent::class != $namespace && class_exists($namespace)))
         {
             $result[$baseName] = array_key_exists($baseName,$result) ? $result[$baseName] : new $namespace();
          
