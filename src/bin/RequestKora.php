@@ -151,10 +151,17 @@ class RequestKora
 
             if($parent != null && property_exists($parent,$param))
             {
-        
                 $ref = new ReflectionProperty($parent,$param);
                 $ref->setAccessible(true);
-                $ref->setValue($parent,(is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters);
+
+                $type =  $ref->getType();
+                
+                $p = (is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters;
+
+                if(gettype($p) == $type->getName())
+                {
+                    $ref->setValue($parent,(is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters);
+                }
             }
             else
             {
