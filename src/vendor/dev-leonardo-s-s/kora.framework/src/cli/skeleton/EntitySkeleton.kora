@@ -1,0 +1,16 @@
+<?php 
+namespace app\{{__nameApp}}\data\entities;
+
+use Illuminate\Database\Eloquent\Model;
+
+class {{__nameEntityFull}} extends Model
+{
+    public $table = '{{__nameEntityLower}}';
+    protected $primaryKey = 'id_{{__nameEntityLower}}';
+    public $timestamps = false;
+
+    public function jsonSerialize(): mixed 
+    { 
+        return ''; 
+    }
+}

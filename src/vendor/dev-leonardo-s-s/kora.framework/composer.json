@@ -1,0 +1,34 @@
+{
+    "name": "dev-leonardo-s-s/kora.framework",
+    "description": "The magic framework php",
+    "type": "framework",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "leonardo Souza da Silva",
+            "email": "dev.leonardo.s.s@gmail.com"
+        }
+    ], 
+    "require": {
+        "illuminate/collections": "^10.48.4",
+        "illuminate/console": "^10.48.4",
+        "illuminate/database": "^10.48.4",
+        "illuminate/filesystem": "^10.48.4",
+        "league/commonmark": "^2",
+        "mtdowling/jmespath.php": "^2.7",
+        "respect/validation": "^2.3",
+        "symfony/console": "^6.3",
+        "symfony/filesystem": "^6.3",
+        "symfony/http-foundation": "^6.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "kora\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

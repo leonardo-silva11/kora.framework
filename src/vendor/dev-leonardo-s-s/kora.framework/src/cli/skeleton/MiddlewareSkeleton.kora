@@ -1,0 +1,18 @@
+<?php 
+namespace app\{{__nameApp}}\middlewares;
+use Exception;
+
+
+trait {{__nameMiddlewareFull}}
+{
+    /**
+    * in controller call method with:    
+    * use {{__nameMiddlewareFull}} { __construct as public {{__nameMiddlewareFull}}Constructor; }
+    **/
+    public final function __construct()  {}
+
+    public function {{__nameMethod}}() : array
+    {   
+        return [];        
+    }
+}

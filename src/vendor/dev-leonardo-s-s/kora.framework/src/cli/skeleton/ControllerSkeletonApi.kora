@@ -1,0 +1,33 @@
+<?php
+namespace app\{{__nameApp}}\controllers;
+
+use kora\bin\ControllerKora;
+use kora\bin\DefaultResponseKora;
+use app\{{__nameApp}}\models\{{__nameController}}Model;
+
+class {{__nameController}}Controller extends ControllerKora
+{
+    private {{__nameController}}Model ${{__nameController}}Model; 
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        $this->{{__nameController}}Model = new {{__nameController}}Model();
+    }
+
+    public function {{__action}}()
+    {    
+        try 
+        {
+            $list = $this->{{__nameController}}Model->{{__action}}();
+
+            return new DefaultResponseKora(\json_encode(['message' => 'list returned successful!','title' => '{{__nameController}}','list' => $list]),200,['Content-Type' => 'application/json']);
+        } 
+        catch (\Throwable $th) 
+        {
+            return (new DefaultResponseKora(\json_encode(['message' => $th->getMessage()]),500,['Content-Type' => 'application/json']))
+            ->parseThrowable($th);
+        }
+    }
+}
