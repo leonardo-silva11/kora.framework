@@ -21,10 +21,12 @@ implements IMenssengerKora
        return parent::send();
     }
 
-    public function parseThrowable(Throwable $th,array $headers = [], bool $interrupt = true)
+    public function parseThrowable(Throwable $th,array $headers = [], bool $interrupt = true, $rewriteHttpCode = false)
     {
         $code = $th->getCode();
         $httpCode = is_int($code) && $code >= 100 && $code <= 599 ? $code : 500;
+
+        $httpCode = !$rewriteHttpCode ? $httpCode : $this->getStatusCode();
 
         $details = [];
 

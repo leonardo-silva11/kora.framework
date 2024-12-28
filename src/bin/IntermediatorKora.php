@@ -199,6 +199,7 @@ abstract class IntermediatorKora
       
                     $response = self::$middlewareKora->callSingleMiddleware(self::$controller,$filter,$method,$services,$key);
                     $data = $response->getResponse($method);
+                   // dd($data,$response->getName());
                     self::$app->addInjectable($response->getName(),$response);
                     $bag->add($response->getName(),$response);
            

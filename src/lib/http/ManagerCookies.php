@@ -31,10 +31,21 @@ class ManagerCookies
         return $this->Request->cookies->get($key);
     }
 
+    public function getByGlobal($key)
+    {
+        if(empty($key))
+        {
+            throw new DefaultException('The cookie key is null or empty!',500);
+        }
+
+        return array_key_exists($key,$_COOKIE) ? (object)['name' => $key, 'value' => $_COOKIE[$key]] : null;
+    }
+
     public function delete(string $key)
     {
-        if(!$this->exists($key))
+        if($this->exists($key))
         {
+       
             $response = new Response();
             $cookie = Cookie::create($key, null, 1, '/', null, false, true);
             $response->headers->setCookie($cookie);
