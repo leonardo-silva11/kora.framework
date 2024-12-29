@@ -158,7 +158,7 @@ class RequestKora
                 
                 $p = (is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters;
 
-                if(gettype($p) == $type->getName())
+                if(method_exists('getName',$type) && gettype($p) == $type->getName())
                 {
                     $ref->setValue($parent,(is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters);
                 }

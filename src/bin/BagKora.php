@@ -22,7 +22,7 @@ class BagKora
         }
     }
 
-    public function getResponse(string $key)
+    public function getResponse(string $key, $interrupt = true)
     {
         $keys = explode('.',$key);
 
@@ -32,19 +32,32 @@ class BagKora
 
         while($i < count($keys))
         {
-            if((is_array($result) && (empty($keys[$i]) || !array_key_exists($keys[$i],$result))))
+            try 
             {
-                throw new DefaultException("The path: {{$key}} not found in bag!",404);
+                if((is_array($result) && (empty($keys[$i]) || !array_key_exists($keys[$i],$result))))
+                {
+                    throw new DefaultException("The path: {{$key}} not found in bag!",404);
+                }
+                
+                $result = $result[$keys[$i]];
+    
+                if(is_object($result) && method_exists($result,'getResponse'))
+                {
+                    $result = $result->getResponse();
+                }
+                
+                ++$i;
+            } 
+            catch (\Throwable $th) 
+            {
+                if(!$interrupt)
+                {
+                    break;
+                }
+                
+                throw $th;
             }
-            
-            $result = $result[$keys[$i]];
 
-            if(is_object($result) && method_exists($result,'getResponse'))
-            {
-                $result = $result->getResponse();
-            }
-            
-            ++$i;
         }
 
         return $result;
