@@ -143,24 +143,42 @@ class RequestKora
         }
         else
         {
-        
+  
             if((is_array($parameters) && !array_key_exists($param,$parameters)) && ($parent != null && !property_exists($parent,$param)))
             {
                 throw new InputException("The attribute {$param} is not allowed or missed in request!",400);
             }
-
+          
             if($parent != null && property_exists($parent,$param))
             {
                 $ref = new ReflectionProperty($parent,$param);
                 $ref->setAccessible(true);
-
+              
                 $type =  $ref->getType();
                 
                 $p = (is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters;
 
-                if(method_exists('getName',$type) && gettype($p) == $type->getName())
+                if($type == null)
                 {
-                    $ref->setValue($parent,(is_array($parameters) && array_key_exists($param,$parameters)) ? $parameters[$param] : $parameters);
+                    $objectClass = $parent::class;
+                    throw new InputException("The class {{$objectClass}} needs to have all typed attributes, the attribute {{$param}} has no defined type.",500);
+                }
+
+                $p = $this->validateTypeParams($type,$p);
+
+                $typeMapping = [
+                    'integer' => 'int',
+                    'double'  => 'float',
+                    'boolean' => 'bool',
+                    'string'  => 'string',
+                    'array'   => 'array',
+                    'object'  => 'object',
+                    'NULL'    => 'null',
+                ];
+              
+                if(array_key_exists(gettype($p),$typeMapping) && $typeMapping[gettype($p)] == $type->getName())
+                {
+                    $ref->setValue($parent,$p);
                 }
             }
             else
@@ -168,6 +186,34 @@ class RequestKora
                 $result[$param] = $parameters[$param];
             }
         }
+    }
+
+    private function validateTypeParams(\ReflectionNamedType|\ReflectionUnionType|\ReflectionIntersectionType|null $type, $value)
+    {
+        switch ($type->getName()) {
+            case 'int':
+                $value = is_numeric($value) ? (int)$value : null;
+                break;
+            case 'float':
+                $value = is_numeric($value) ? (float)$value : null;
+                break;
+            case 'bool':
+                $value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                break;
+            case 'string':
+                $value = (string)$value;
+                break;
+            case 'array':
+                $value = is_array($value) ? (array)$value : [];
+                break;
+            case 'object':
+                $value = is_object($value) ? (object)$value : new stdClass();
+                break;    
+            default:
+                throw new \kora\lib\exceptions\DefaultException("Unsupported data type {{$type->getName()}}!",400);
+        }
+
+        return $value;
     }
 
     private function verifyParametersRequest($result, $parameters, $allParams, $params, $httpMethod)
