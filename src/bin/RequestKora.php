@@ -183,7 +183,7 @@ class RequestKora
             }
             else
             {
-                $result[$param] = $parameters[$param];
+                $result[$param] = array_key_exists($param,$parameters) ? $parameters[$param] : throw new DefaultException("The parameter {{$param}} not found!",404);
             }
         }
     }
