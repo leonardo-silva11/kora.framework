@@ -353,12 +353,15 @@ class RequestKora
         //$nameOfproject = $this->app->getParamConfig('info.nameOfproject');
         $action = $this->app->getParamConfig('http.action.name');
         $baseUrl = "{$this->Request->getSchemeAndHttpHost()}{$this->Request->getBaseUrl()}";
+        $controllerName = lcfirst($this->app->getParamConfig('http.controller.name'));
 
         $this->app->setParamConfig('http.request.urls',[
             'baseUrl' => $baseUrl,
             'urlApp' => "{$baseUrl}/app/{$nameOfApp}",
             'urlViews' => "{$baseUrl}/app/{$nameOfApp}/views",
             'urlView' => "{$baseUrl}/app/{$nameOfApp}/views/{$action}",
+            'urlViewGroup' => "{$baseUrl}/app/{$nameOfApp}/views/{$controllerName}",
+            'urlViewGroupAction' => "{$baseUrl}/app/{$nameOfApp}/views/{$controllerName}/{$action}",
             'urlViewsSections' => "{$baseUrl}/app/{$nameOfApp}/views/sections",
             'urlPublicTemplates' => "{$baseUrl}/app/{$nameOfApp}/public/templates",
             'urlPublicAssets' => "{$baseUrl}/app/{$nameOfApp}/public/assets",
