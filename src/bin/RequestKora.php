@@ -175,7 +175,7 @@ class RequestKora
                     'object'  => 'object',
                     'NULL'    => 'null',
                 ];
-              
+      
                 if(array_key_exists(gettype($p),$typeMapping) && $typeMapping[gettype($p)] == $type->getName())
                 {
                     $ref->setValue($parent,$p);
@@ -201,7 +201,7 @@ class RequestKora
                 $value = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
                 break;
             case 'string':
-                $value = (string)$value;
+                $value = is_string($value) ? (string)$value : Strings::empty;
                 break;
             case 'array':
                 $value = is_array($value) ? (array)$value : [];
